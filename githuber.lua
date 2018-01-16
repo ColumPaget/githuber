@@ -233,14 +233,15 @@ if S ~= nil
 then
 	S:writeln(doc)
 	S:commit()
-	
+
+	doc=S:readdoc();
+	P=dataparser.PARSER("json",doc);
+
 	if S:getvalue("HTTP:ResponseCode")=="201"
 	then
 		Out:puts("~gOKAY~0 Release created successfully\n")
-		doc=S:readdoc();
-		P=dataparser.PARSER("json",doc);
 	else
-		Out:puts("~rFAIL~0 Release creation failed\n")
+		Out:puts("~rFAIL~0 Release creation failed: " ..P:value("message").."\n")
 	end
 else	
 	Out:puts("~rFAIL~0 No connection to github.com\n")
