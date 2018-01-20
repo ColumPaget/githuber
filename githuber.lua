@@ -4,10 +4,11 @@ require("process");
 require("terminal")
 require("strutil")
 require("net")
+require("time")
 
 
 -- program version
-VERSION="1.0"
+VERSION="1.1"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 GithubUser=""
@@ -70,6 +71,7 @@ starred_color="~y"
 fork_color="~m"
 create_color="~g"
 pullreq_color="~r"
+url_color="~c"
 
 --        USER CONFIGURABLE STUFF ENDS       --
 
@@ -85,33 +87,40 @@ return(val)
 end
 
 
+function ParseIssueEvent(I)
+local Issue={}
 
-function HandleIssuesEvent(I)
-local event_text
+if strutil.strlen(I:value("id")) ==0 then return nil end
 
-if I:value("type") == "IssueCommentEvent"
+Issue.id=string.format("%- 9s", I:value("id"))
+Issue.who=I:value("actor/login")
+if strutil.strlen(Issue.who) == 0 then Issue.who=I:value("user/login") end
+Issue.what=I:value("type")
+Issue.where=I:value("repository/name")
+if strutil.strlen(Issue.where) == 0 then Issue.where=I:value("repo/name") end
+Issue.when=time.tosecs("%Y-%m-%dT%H:%M:%S", I:value("created_at"))
+Issue.why=I:value("title")
+if strutil.strlen(Issue.who) == 0 then Issue.why=I:value("payload/issue/title") end
+Issue.state=I:value("payload/issue/state")
+Issue.no_of_comments=I:value("comments")
+if strutil.strlen(Issue.no_of_comments) == 0  then Issue.no_of_comments=I:value("payload/issue/comments") end
+if Issue.what == "IssueCommentEvent"
 then
-Out:puts(I:value("actor/login").. "  "..comment_color.."commented~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
-event_text=I:value("payload/comment/body")
+Issue.details=I:value("payload/comment/body")
 else
-Out:puts(I:value("actor/login").. "  ".. issue_color .. I:value("payload/action") .. "  issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
-event_text=I:value("payload/issue/body")
+Issue.details=I:value("payload/issue/body")
+Issue.comments={}
 end
 
-if strutil.strlen(event_text) > 0 
-then 
-event_text=strutil.unQuote(event_text)
-event_text=strutil.stripCRLF(event_text)
-Out:puts(event_text.."\r\n") 
-end
-
-Out:puts("\n")
+return Issue
 end
 
 
 
-function GithubNotifications(user)
-local S, doc, url, P, N, M, I, event
+
+function GithubNotifications(user, filter)
+local S, doc, url, P, N, M, I, event, when, secs
+local day=3600 * 24
 
 url="https://api.github.com/users/"..user.."/received_events";
 S=stream.STREAM(url);
@@ -124,20 +133,39 @@ M=N:first()
 I=M:first()
 while I ~= nil
 do
-if I:value("type") == "IssuesEvent"
+
+secs=time.tosecs("%Y-%m-%dT%H:%M:%S", I:value("created_at"))
+-- if secs is zero, it means we got an item that's not a notification
+if secs > 0
 then
-	Out:puts(I:value("actor/login").. "  "..issue_color .. I:value("payload/action") .. "  issue~0"..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
-elseif I:value("type")=="IssueCommentEvent"
-then
-	Out:puts(I:value("payload/comment/user/login").. "  ~rcommented on issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
-else
-	event=I:value("type");
+if (time.secs() - secs) < day then when="~e"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0"
+elseif (time.secs() - secs) < day * 2 then when="~y"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0"
+else when="~c"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0" end
+
+event=I:value("type");
+if 
+(filter == nil) or 
+(filter =="stars" and event == "WatchEvent") or
+(filter =="forks" and event == "ForkEvent") or
+(filter =="pulls" and event == "PullRequestEvent") or
+(filter =="issues" and event == "IssuesEvent") 
+then 
 	if event=="WatchEvent" then event=starred_color.."starred~0" end
 	if event=="CreateEvent" then event=creat_color.."created~0" end
 	if event=="ForkEvent" then event=fork_color.."forked~0" end
 	if event=="PullRequestEvent" then event=pullreq_color.."pull request~0" end
+
+	if event == "IssuesEvent"
+	then
+		Out:puts(when.."  ".. I:value("actor/login").. "  "..issue_color .. I:value("payload/action") .. "  issue~0"..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
+	elseif I:value("type")=="IssueCommentEvent"
+	then
+		Out:puts(when.."  ".. I:value("payload/comment/user/login").. "  ~rcommented on issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
+	else
 	
-	Out:puts(I:value("actor/login").. "  " .. event .. "  ".. I:value("repo/name") .. "\r\n");
+		Out:puts(when.."  "..I:value("actor/login").. "  " .. event .. "  ".. I:value("repo/name") .. "\r\n");
+	end
+end
 end
 I=M:next()
 end
@@ -147,12 +175,15 @@ end
 
 
 function GithubIssues(user)
-local S, doc, url, P, N, M, I, event
+local S, doc, url, P, N, M, I, key
+local Issues={}
+local Event
 
-url="https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/users/"..user.."/received_events";
-S=stream.STREAM(url);
+url="https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/issues?filter=all";
+S=stream.STREAM(url, "r hostauth");
 doc=S:readdoc();
 
+print(doc)
 P=dataparser.PARSER("json",doc);
 
 N=P:open("/")
@@ -160,14 +191,34 @@ M=N:first()
 I=M:first()
 while I ~= nil
 do
-if I:value("type") == "IssuesEvent" or I:value("type")=="IssueCommentEvent"
-then
-HandleIssuesEvent(I)
-end
+Event=ParseIssueEvent(I)
+if Event ~= nil then Issues[Event.id]=Event; end
+
 I=M:next()
 end
 
+for key,Event in pairs(Issues)
+do
+	if Event.state ~="closed" then Out:puts(Event.id .." ~rOPEN~0 since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%- 15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n") end
 end
+
+
+--[[
+Out:puts("state: "..I:value("payload/issue/state").."\r\n")
+if ShowDetail
+then
+if strutil.strlen(event_text) > 0 
+then 
+event_text=strutil.unQuote(event_text)
+event_text=strutil.stripCRLF(event_text)
+Out:puts(event_text.."\r\n") 
+end
+Out:puts("\r\n")
+end
+]]--
+
+end
+
 
 
 function GithubRepoTraffic(user, repo)
@@ -211,7 +262,7 @@ while item ~= nil
 do
 Out:puts("\n")
 Out:puts("~e"..item:value("id").." ~y"..item:value("tag_name").."~0  "..item:value("name").."\n")
-Out:puts("~c"..item:value("url").."~0\n")
+Out:puts(url_color..item:value("url").."~0\n")
 Out:puts("~mtar: "..item:value("tarball_url").."~0\n")
 Out:puts("~mzip: "..item:value("zipball_url").."~0\n")
 item=P:next()
@@ -233,7 +284,6 @@ if S ~= nil
 then
 	S:writeln(doc)
 	S:commit()
-
 	doc=S:readdoc();
 	P=dataparser.PARSER("json",doc);
 
@@ -351,6 +401,34 @@ end
 end
 
 
+function GithubRepoListWatchers(user, repo)
+local S, doc, url, P, item, len
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/stargazers"
+
+S=stream.STREAM(url, "r hostauth");
+if S ~= nil
+then
+	doc=S:readdoc();
+
+	if S:getvalue("HTTP:ResponseCode")=="200"
+	then
+		P=dataparser.PARSER("json",doc);
+		item=P:next()
+		while item ~=nil
+		do
+		Out:puts("~e"..item:value("login").."~0  "..url_color..item:value("html_url").."~0\r\n")
+		item=P:next()
+		end
+	end
+else
+		Out:puts("~rFAIL~0 No connection to github.com\n")
+end
+
+end
+
+
+
 function GithubRepoList(user)
 local S, doc, url, P, N, M, I, event, clones, uniques
 
@@ -384,12 +462,76 @@ GithubRepoCreate(user, args[3], args[4])
 elseif args[2]=="del" or args[2]=="delete" or args[2]=="rm"
 then
 GithubRepoDelete(user, args[3]) 
+elseif args[2]=="watchers"
+then
+GithubRepoListWatchers(user, args[3])
 else
 GithubRepoList(user)
 end
 
 end
 
+
+function GithubWatchRepo(user, url, WatchType)
+local S, rcode, len
+local URLInfo
+local doc=""
+
+URLInfo=net.parseURL(url);
+if WatchType=="star" then
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/user/starred"..URLInfo.path;
+else
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.path.."/subscription"
+doc='{"subscribed": true, "ignored": false}'
+end
+print(url)
+
+len=strutil.strlen(doc)
+S=stream.STREAM(url, "W hostauth content-type=application/json content-length="..len)
+if len > 0 then S:writeln(doc) end
+S:commit();
+doc=S:readdoc();
+
+rcode=S:getvalue("HTTP:ResponseCode")
+
+if rcode=="204" or rcode=="200"
+then
+	if WatchType=="star" then
+	Out:puts("~gOKAY~0 target starred successfully\n")
+	else
+	Out:puts("~gOKAY~0 target watched successfully\n")
+	end
+else
+	Out:puts("~rFAIL~0 add " .. WatchType .. " failed\n")
+end
+
+end
+
+
+
+function GithubUnWatchRepo(user, url, WatchType)
+local S, doc, P, N, M, I, event, clones, uniques
+local URLInfo
+
+URLInfo=net.parseURL(url);
+if WatchType=="star" then
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/user/starred"..URLInfo.path;
+else
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.path.."/subscription";
+end
+
+print(url)
+S=stream.STREAM(url, "D hostauth");
+doc=S:readdoc();
+
+if S:getvalue("HTTP:ResponseCode")=="204"
+then
+	Out:puts("~gOKAY~0 star deleted successfully\n")
+else
+	Out:puts("~rFAIL~0 delete star failed\n")
+end
+
+end
 
 
 
@@ -401,13 +543,21 @@ function PrintUsage()
 
 print()
 PrintVersion()
-print("   githuber.lua notify                                              - list users notifications")
-print("   githuber.lua repo list                                           - list users repositories")
+print("   githuber.lua notify                                              - list user's notifications")
+print("   githuber.lua notify issues                                       - list user's issues notifications")
+print("   githuber.lua notify forks                                        - list user's forks notifications")
+print("   githuber.lua notify stars                                        - list user's stars notifications")
+print("   githuber.lua repo list                                           - list user's repositories")
 print("   githuber.lua repo new [name] [description]                       - create new repository")
 print("   githuber.lua repo create [name] [description]                    - create new repository")
 print("   githuber.lua repo del [name]                                     - delete repository")
 print("   githuber.lua repo delete [name]                                  - delete repository")
 print("   githuber.lua repo rm [name]                                      - delete repository")
+print("   githuber.lua repo watchers [name]                                - list repo watchers")
+print("   githuber.lua star [url]                                          - 'star' (bookmark) a repo by url")
+print("   githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url")
+print("   githuber.lua watch [url]                                          - 'watch' a repo by url")
+print("   githuber.lua unwatch [url]                                        - remove a 'watch' of a repo by url")
 print("   githuber.lua issues                                              - list issues across all users repositories")
 print("   githuber.lua releases [repo]                                     - list releases for a repository")
 print("   githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository")
@@ -455,9 +605,21 @@ if GithubCheckUser(GithubUser) then GithubRepoTraffic(GithubUser, arg[2]) end
 elseif arg[1]=="issues" 
 then
 if GithubCheckUser(GithubUser) then GithubIssues(GithubUser) end
+elseif arg[1]=="star" 
+then
+if GithubCheckUser(GithubUser) then GithubWatchRepo(GithubUser, arg[2], "star") end
+elseif arg[1]=="unstar" 
+then
+if GithubCheckUser(GithubUser) then GithubUnWatchRepo(GithubUser, arg[2], "star") end
+elseif arg[1]=="watch" 
+then
+if GithubCheckUser(GithubUser) then GithubWatchRepo(GithubUser, arg[2], "watch") end
+elseif arg[1]=="unwatch" 
+then
+if GithubCheckUser(GithubUser) then GithubUnWatchRepo(GithubUser, arg[2],"watch") end
 elseif arg[1]=="notify" 
 then
-if GithubCheckUser(GithubUser) then GithubNotifications(GithubUser) end
+if GithubCheckUser(GithubUser) then GithubNotifications(GithubUser, arg[2]) end
 else
 PrintUsage()
 end
