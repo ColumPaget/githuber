@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.1"
+VERSION="1.2"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 GithubUser=""
@@ -67,7 +67,7 @@ Color setup. Available colors are:
 issue_color="~r"
 comment_color="~y"
 title_color="~c"
-starred_color="~y"
+starred_color="~b"
 fork_color="~m"
 create_color="~g"
 pullreq_color="~r"
@@ -318,7 +318,7 @@ do
 if item:value("tag_name")==tag
 then
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases/"..item:value("id");
-S=stream.STREAM(url, "method=DELETE")
+S=stream.STREAM(url, "D hostauth")
 doc=S:readdoc()
 S:close()
 break
@@ -342,7 +342,6 @@ then
 elseif args[3]=="rm" or args[3]=="del" or args[3]=="delete"
 then 
 	GithubRepoReleasesDelete(user, repo, args[3]) 
-
 else
 	GithubRepoReleasesList(user, repo) 
 end
@@ -400,6 +399,38 @@ end
 
 end
 
+function GithubRepoSet(user, repo, key, value)
+local S, doc, url, P, item, len
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo
+
+doc='{"name": "'..strutil.quoteChars(repo,'"')..'", '
+if key=="description" then doc=doc..'"description": "'..strutil.quoteChars(value,'"') end
+if key=="homepage" then doc=doc..'"homepage": "'..strutil.quoteChars(value,'"') end
+doc=doc..'"}'
+
+len=strutil.strlen(doc)
+S=stream.STREAM(url, "P hostauth content-type=application/json content-length="..len)
+
+if S ~= nil
+then
+	S:writeln(doc)
+	S:commit()
+
+	doc=S:readdoc();
+
+	if S:getvalue("HTTP:ResponseCode")=="200"
+	then
+		Out:puts("~gOKAY~0 Repo updated successfully\n")
+	else
+		Out:puts("~rFAIL~0 Repo update failed\n")
+	end
+else
+		Out:puts("~rFAIL~0 No connection to github.com\n")
+end
+
+end
+
 
 function GithubRepoListWatchers(user, repo)
 local S, doc, url, P, item, len
@@ -428,9 +459,24 @@ end
 end
 
 
+-- color is only applied if attribute is greater than 0
+function FormatNumericValue(name, value, color)
+local str=""
+local valnum
+
+valnum=tonumber(value)
+if valnum==nil then valnum=0 end
+
+if (valnum > 0) then str="~e"..name..": "..color..value.."~0  "
+else str=name..": "..value.."  "
+end
+
+return(str)
+end
+
 
 function GithubRepoList(user)
-local S, doc, url, P, N, M, I, event, clones, uniques
+local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
 
 url="https://api.github.com/users/"..user.."/repos";
 S=stream.STREAM(url);
@@ -443,11 +489,24 @@ M=N:first()
 I=M:first()
 while I ~= nil
 do
-desc=I:value("description");
-clones,uniques=GithubRepoTraffic(user, I:value("name"));
-if desc == nil then desc="" end
-Out:puts("~m~e" .. I:value("name") .. "~0  " .. "~estars:~0 " .. I:value("stargazers_count") .. "  ~eforks:~0 " .. I:value("forks_count") .. "  ~rissues:~0 " .. I:value("open_issues") .. " clones: ".. clones .." uniques: "..uniques.."\r\n" .. I:value("description") .. "\r\n\n");
-I=M:next()
+	name=I:value("name")
+	if strutil.strlen(name) > 0 
+	then
+		desc=I:value("description");
+		clones,uniques=GithubRepoTraffic(user, name);
+		if strutil.strlen(desc) == 0 or desc == "null" then desc=issue_color.."no description~0" end
+		str="~m~e" .. I:value("name") .. "~0  " 
+		str=str.. FormatNumericValue("stars", I:value("stargazers_count"), starred_color)
+		str=str.. FormatNumericValue("forks", I:value("forks_count"), fork_color)
+		str=str.. FormatNumericValue("issues", I:value("open_issues"), issue_color)
+		str=str.. FormatNumericValue("clones", clones, fork_color)
+		str=str.. FormatNumericValue("uniques", uniques, fork_color)
+		str=str.."\r\n" .. desc .. "\r\n\n"
+		
+		Out:puts(str)
+	end
+	
+	I=M:next()
 end
 
 end
@@ -462,6 +521,9 @@ GithubRepoCreate(user, args[3], args[4])
 elseif args[2]=="del" or args[2]=="delete" or args[2]=="rm"
 then
 GithubRepoDelete(user, args[3]) 
+elseif args[2]=="set"
+then
+GithubRepoSet(user, args[3], args[4], args[5]) 
 elseif args[2]=="watchers"
 then
 GithubRepoListWatchers(user, args[3])
@@ -550,6 +612,8 @@ print("   githuber.lua notify stars                                        - lis
 print("   githuber.lua repo list                                           - list user's repositories")
 print("   githuber.lua repo new [name] [description]                       - create new repository")
 print("   githuber.lua repo create [name] [description]                    - create new repository")
+print("   githuber.lua repo set [repo] description [description]           - change description for a repository")
+print("   githuber.lua repo set [repo] homepage [homepage]                 - change homepage for a repository")
 print("   githuber.lua repo del [name]                                     - delete repository")
 print("   githuber.lua repo delete [name]                                  - delete repository")
 print("   githuber.lua repo rm [name]                                      - delete repository")
