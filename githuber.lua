@@ -8,14 +8,23 @@ require("time")
 
 
 -- program version
-VERSION="1.2"
+VERSION="1.3"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
+-- Put your username here, or leave bland and use environment variable GITHUB_USER instead
 GithubUser=""
+
+-- You can put your github password here, but I strongly advise you to go to 'Settings->Developer Settings->Personal Access Tokens' 
+-- on github and create a personal access token instead. This will allow you to specify exactly the permissions you want this script
+-- to have
+
+-- You can leave this blank and use environment variable GITHUB_AUTH instead
 GithubAuth=""
 
+-- Instead of putting Username and Credentials into this script, you can put them in environment variables
 if strutil.strlen(GithubUser) == 0 then GithubUser=process.getenv("GITHUB_USER") end
 if strutil.strlen(GithubAuth) == 0 then GithubAuth=process.getenv("GITHUB_AUTH") end
+
 
 --default User-agent. All github requests must supply a user-agent header
 process.lu_set("HTTP:UserAgent","githuber-"..VERSION);
@@ -151,7 +160,7 @@ if
 (filter =="issues" and event == "IssuesEvent") 
 then 
 	if event=="WatchEvent" then event=starred_color.."starred~0" end
-	if event=="CreateEvent" then event=creat_color.."created~0" end
+	if event=="CreateEvent" then event=create_color.."created~0" end
 	if event=="ForkEvent" then event=fork_color.."forked~0" end
 	if event=="PullRequestEvent" then event=pullreq_color.."pull request~0" end
 
@@ -183,7 +192,6 @@ url="https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/issues?fil
 S=stream.STREAM(url, "r hostauth");
 doc=S:readdoc();
 
-print(doc)
 P=dataparser.PARSER("json",doc);
 
 N=P:open("/")
@@ -218,6 +226,7 @@ end
 ]]--
 
 end
+
 
 
 
@@ -481,7 +490,7 @@ local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
 url="https://api.github.com/users/"..user.."/repos";
 S=stream.STREAM(url);
 doc=S:readdoc();
-
+print(doc)
 P=dataparser.PARSER("json",doc);
 
 N=P:open("/")
@@ -595,6 +604,52 @@ end
 
 end
 
+function GithubRepoPulls(user, repo)
+local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
+
+--get list of repos, then get pulls for each one
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls?state=all";
+print(url)
+S=stream.STREAM(url);
+doc=S:readdoc();
+--print(doc)
+P=dataparser.PARSER("json",doc);
+
+N=P:open("/")
+--M=N:first()
+I=N:first()
+while I ~= nil
+do
+	print(repo.. "  " .. value("id") .. "  " ..value("title").."\n")
+	
+	I=N:next()
+end
+
+end
+
+
+function GithubPullsList(user)
+local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
+
+--get list of repos, then get pulls for each one
+url="https://api.github.com/users/"..user.."/repos";
+S=stream.STREAM(url);
+doc=S:readdoc();
+P=dataparser.PARSER("json",doc);
+
+N=P:open("/")
+M=N:first()
+I=M:first()
+while I ~= nil
+do
+	name=I:value("name")
+	if strutil.strlen(name) > 0 then GithubRepoPulls(user, name); end
+	
+	I=M:next()
+end
+
+end
+
 
 
 function PrintVersion()
@@ -669,6 +724,9 @@ if GithubCheckUser(GithubUser) then GithubRepoTraffic(GithubUser, arg[2]) end
 elseif arg[1]=="issues" 
 then
 if GithubCheckUser(GithubUser) then GithubIssues(GithubUser) end
+elseif arg[1]=="pulls" 
+then
+if GithubCheckUser(GithubUser) then GithubPullsList(GithubUser) end
 elseif arg[1]=="star" 
 then
 if GithubCheckUser(GithubUser) then GithubWatchRepo(GithubUser, arg[2], "star") end
