@@ -113,7 +113,7 @@ end
 
 
 
-function ParseIssueEvent(I)
+function ParseEvent(I)
 local Issue={}
 local tmpstr, details
 
@@ -132,6 +132,9 @@ if details == nil then details=I end
 
 Issue.why=details:value("title")
 Issue.state=details:value("state")
+Issue.url=details:value("html_url")
+Issue.diff=details:value("diff_url")
+Issue.patch=details:value("patch_url")
 Issue.no_of_comments=details:value("comments")
 
 if Issue.what == "IssueCommentEvent"
@@ -202,12 +205,27 @@ end
 
 end
 
+function GithubOutputEvent(Event)
+local State
+
+	if Event.state == "closed" then State="~gclosed~0"
+	else State="~rOPEN~0"
+	end
+
+	Out:puts(Event.id .." "..State.." since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%- 15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n  url: "..Event.url.."\r\n")
+	if strutil.strlen(Event.diff) > 0
+	then
+	Out:puts("  diff: "..Event.diff.."  patch: "..Event.patch .. "\r\n")
+	end
+	Out:puts("\r\n")
+end
+
 
 
 function GithubIssuesURL(url, showall)
 local S, doc, P, N, M, I, key
 local Issues={}
-local Event, State
+local Event
 
 S=stream.STREAM(url, "r hostauth");
 doc=S:readdoc();
@@ -218,7 +236,7 @@ M=N:first()
 I=M:first()
 while I ~= nil
 do
-Event=ParseIssueEvent(I)
+Event=ParseEvent(I)
 if Event ~= nil then Issues[Event.id]=Event; end
 
 I=M:next()
@@ -226,14 +244,7 @@ end
 
 for key,Event in pairs(Issues)
 do
-	if Event.state ~="closed" or showall==true
-	then 
-	if Event.state == "closed" then State="~gclosed~0"
-	else State="~rOPEN~0"
-	end
-
-	Out:puts(Event.id .." "..State.." since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%- 15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n")
-	end
+	if Event.state ~="closed" or showall==true then GithubOutputEvent(Event) end
 end
 
 
@@ -501,7 +512,6 @@ local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
 url="https://api.github.com/users/"..user.."/repos";
 S=stream.STREAM(url);
 doc=S:readdoc();
-print(doc)
 P=dataparser.PARSER("json",doc);
 
 N=P:open("/")
@@ -547,9 +557,9 @@ GithubRepoSet(user, args[3], args[4], args[5])
 elseif args[2]=="watchers"
 then
 GithubRepoListWatchers(user, args[3])
-elseif args[2]=="watchers"
+elseif args[2]=="pulls"
 then
-GithubRepoListWatchers(user, args[3])
+GithubRepoPulls(user, args[3])
 elseif args[2]=="issues"
 then
 GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/repos/"..GithubUser.."/"..args[3].."/issues?state=all",true)
@@ -619,8 +629,10 @@ end
 
 end
 
+
 function GithubRepoPulls(user, repo)
-local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
+local S, doc, url, P, N, M, I
+local Event={}
 
 --get list of repos, then get pulls for each one
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls?state=all";
@@ -633,8 +645,8 @@ N=P:open("/")
 I=N:first()
 while I ~= nil
 do
-	print(repo.. "  " .. value("id") .. "  " ..value("title").."\n")
-	
+	Event=ParseEvent(I)
+	if Event ~= nil then GithubOutputEvent(Event) end
 	I=N:next()
 end
 
@@ -642,7 +654,7 @@ end
 
 
 function GithubPullsList(user)
-local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
+local S, doc, url, P, N, M, I
 
 --get list of repos, then get pulls for each one
 url="https://api.github.com/users/"..user.."/repos";
@@ -686,11 +698,12 @@ print("   githuber.lua repo del [name]                                     - del
 print("   githuber.lua repo delete [name]                                  - delete repository")
 print("   githuber.lua repo rm [name]                                      - delete repository")
 print("   githuber.lua repo watchers [name]                                - list repo watchers")
+print("   githuber.lua repo pulls [name]                                   - list repo pull requests")
 print("   githuber.lua star [url]                                          - 'star' (bookmark) a repo by url")
 print("   githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url")
-print("   githuber.lua watch [url]                                          - 'watch' a repo by url")
-print("   githuber.lua unwatch [url]                                        - remove a 'watch' of a repo by url")
-print("   githuber.lua issues                                              - list issues across all users repositories")
+print("   githuber.lua watch [url]                                         - 'watch' a repo by url")
+print("   githuber.lua unwatch [url]                                       - remove a 'watch' of a repo by url")
+--print("   githuber.lua issues                                              - list issues across all users repositories")
 print("   githuber.lua releases [repo]                                     - list releases for a repository")
 print("   githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository")
 print("   githuber.lua releases [repo] create [name] [title] [description] - create release for a repository")
