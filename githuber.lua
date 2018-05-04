@@ -96,8 +96,26 @@ return(val)
 end
 
 
+-- color is only applied if attribute is greater than 0
+function FormatNumericValue(name, value, color)
+local str=""
+local valnum
+
+valnum=tonumber(value)
+if valnum==nil then valnum=0 end
+
+if (valnum > 0) then str="~e"..name..": "..color..value.."~0  "
+else str=name..": "..value.."  "
+end
+
+return(str)
+end
+
+
+
 function ParseIssueEvent(I)
 local Issue={}
+local tmpstr, details
 
 if strutil.strlen(I:value("id")) ==0 then return nil end
 
@@ -108,11 +126,14 @@ Issue.what=I:value("type")
 Issue.where=I:value("repository/name")
 if strutil.strlen(Issue.where) == 0 then Issue.where=I:value("repo/name") end
 Issue.when=time.tosecs("%Y-%m-%dT%H:%M:%S", I:value("created_at"))
-Issue.why=I:value("title")
-if strutil.strlen(Issue.who) == 0 then Issue.why=I:value("payload/issue/title") end
-Issue.state=I:value("payload/issue/state")
-Issue.no_of_comments=I:value("comments")
-if strutil.strlen(Issue.no_of_comments) == 0  then Issue.no_of_comments=I:value("payload/issue/comments") end
+
+details=I:open("payload/issue")
+if details == nil then details=I end
+
+Issue.why=details:value("title")
+Issue.state=details:value("state")
+Issue.no_of_comments=details:value("comments")
+
 if Issue.what == "IssueCommentEvent"
 then
 Issue.details=I:value("payload/comment/body")
@@ -183,15 +204,13 @@ end
 
 
 
-function GithubIssues(user)
-local S, doc, url, P, N, M, I, key
+function GithubIssuesURL(url, showall)
+local S, doc, P, N, M, I, key
 local Issues={}
-local Event
+local Event, State
 
-url="https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/issues?filter=all";
 S=stream.STREAM(url, "r hostauth");
 doc=S:readdoc();
-
 P=dataparser.PARSER("json",doc);
 
 N=P:open("/")
@@ -207,7 +226,14 @@ end
 
 for key,Event in pairs(Issues)
 do
-	if Event.state ~="closed" then Out:puts(Event.id .." ~rOPEN~0 since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%- 15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n") end
+	if Event.state ~="closed" or showall==true
+	then 
+	if Event.state == "closed" then State="~gclosed~0"
+	else State="~rOPEN~0"
+	end
+
+	Out:puts(Event.id .." "..State.." since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%- 15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n")
+	end
 end
 
 
@@ -226,6 +252,8 @@ end
 ]]--
 
 end
+
+
 
 
 
@@ -467,23 +495,6 @@ end
 
 end
 
-
--- color is only applied if attribute is greater than 0
-function FormatNumericValue(name, value, color)
-local str=""
-local valnum
-
-valnum=tonumber(value)
-if valnum==nil then valnum=0 end
-
-if (valnum > 0) then str="~e"..name..": "..color..value.."~0  "
-else str=name..": "..value.."  "
-end
-
-return(str)
-end
-
-
 function GithubRepoList(user)
 local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
 
@@ -536,6 +547,12 @@ GithubRepoSet(user, args[3], args[4], args[5])
 elseif args[2]=="watchers"
 then
 GithubRepoListWatchers(user, args[3])
+elseif args[2]=="watchers"
+then
+GithubRepoListWatchers(user, args[3])
+elseif args[2]=="issues"
+then
+GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/repos/"..GithubUser.."/"..args[3].."/issues?state=all",true)
 else
 GithubRepoList(user)
 end
@@ -555,7 +572,6 @@ else
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.path.."/subscription"
 doc='{"subscribed": true, "ignored": false}'
 end
-print(url)
 
 len=strutil.strlen(doc)
 S=stream.STREAM(url, "W hostauth content-type=application/json content-length="..len)
@@ -591,7 +607,6 @@ else
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.path.."/subscription";
 end
 
-print(url)
 S=stream.STREAM(url, "D hostauth");
 doc=S:readdoc();
 
@@ -609,10 +624,8 @@ local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
 
 --get list of repos, then get pulls for each one
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls?state=all";
-print(url)
 S=stream.STREAM(url);
 doc=S:readdoc();
---print(doc)
 P=dataparser.PARSER("json",doc);
 
 N=P:open("/")
@@ -723,7 +736,7 @@ then
 if GithubCheckUser(GithubUser) then GithubRepoTraffic(GithubUser, arg[2]) end
 elseif arg[1]=="issues" 
 then
-if GithubCheckUser(GithubUser) then GithubIssues(GithubUser) end
+if GithubCheckUser(GithubUser) then GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/issues?filter=all",false); end
 elseif arg[1]=="pulls" 
 then
 if GithubCheckUser(GithubUser) then GithubPullsList(GithubUser) end
