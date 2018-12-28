@@ -57,12 +57,19 @@ Available commands are:
 ```
    githuber.lua notify                                              - list users notifications
    githuber.lua issues                                              - list issues across all users repositories
-   githuber.lua repo list                                           - list users repositories
+   githuber.lua star [url]                                          - star a repo by url
+   githuber.lua unstar [url]                                        - unstar a repo by url
+   githuber.lua watch [url]                                         - watch a repo by url
+   githuber.lua unwatch [url]                                       - unwatch a repo by url
+   githuber.lua repo list                                           - list user's repositories
    githuber.lua repo new [name] -desc [description]                 - create new repository
    githuber.lua repo create [name] -desc [description]              - create new repository
    githuber.lua repo del [name]                                     - delete repository
    githuber.lua repo delete [name]                                  - delete repository
    githuber.lua repo rm [name]                                      - delete repository
+   githuber.lua repo pulls [name]                                   - list pull requests for a repo
+   githuber.lua repo commits [name]                                 - show commits history for a repo
+   githuber.lua repo history [name]                                 - show commits and release history for a repo
    githuber.lua releases [repo]                                     - list releases for a repository
    githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository
    githuber.lua releases [repo] create [name] [title] [description] - create release for a repository

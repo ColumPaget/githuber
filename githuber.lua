@@ -8,10 +8,10 @@ require("time")
 
 
 -- program version
-VERSION="1.3"
+VERSION="1.4"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
--- Put your username here, or leave bland and use environment variable GITHUB_USER instead
+-- Put your username here, or leave blank and use environment variable GITHUB_USER instead
 GithubUser=""
 
 -- You can put your github password here, but I strongly advise you to go to 'Settings->Developer Settings->Personal Access Tokens' 
@@ -50,12 +50,6 @@ for sshtunnel connections .ssh/config style aliases can be used in the place of 
 ]]--
 
 GithubProxy=""
-
-if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("SOCKS_PROXY") end
-if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("socks_proxy") end
-if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("HTTPS_PROXY") end
-if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("https_proxy") end
-if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("all_proxy") end
 
 
 
@@ -113,6 +107,25 @@ end
 
 
 
+function FormatTime(secs)
+local when
+local day=3600 * 24
+
+if (time.secs() - secs) < day then when="~e"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0"
+elseif (time.secs() - secs) < day * 2 then when="~y"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0"
+else when="~c"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0" end
+
+return(when)
+end
+
+
+function SortByTime(i1, i2)
+if i1.when > i2.when then return(true) end
+return(false)
+
+end
+
+
 function ParseEvent(I)
 local Issue={}
 local tmpstr, details
@@ -153,7 +166,6 @@ end
 
 function GithubNotifications(user, filter)
 local S, doc, url, P, N, M, I, event, when, secs
-local day=3600 * 24
 
 url="https://api.github.com/users/"..user.."/received_events";
 S=stream.STREAM(url);
@@ -171,9 +183,7 @@ secs=time.tosecs("%Y-%m-%dT%H:%M:%S", I:value("created_at"))
 -- if secs is zero, it means we got an item that's not a notification
 if secs > 0
 then
-if (time.secs() - secs) < day then when="~e"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0"
-elseif (time.secs() - secs) < day * 2 then when="~y"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0"
-else when="~c"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0" end
+when=FormatTime(secs)
 
 event=I:value("type");
 if 
@@ -190,7 +200,7 @@ then
 
 	if event == "IssuesEvent"
 	then
-		Out:puts(when.."  ".. I:value("actor/login").. "  "..issue_color .. I:value("payload/action") .. "  issue~0"..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
+		Out:puts(when.."  ".. I:value("actor/login").. "  "..issue_color .. I:value("payload/action") .. "  issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
 	elseif I:value("type")=="IssueCommentEvent"
 	then
 		Out:puts(when.."  ".. I:value("payload/comment/user/login").. "  ~rcommented on issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
@@ -297,6 +307,102 @@ return(clones);
 end
 
 
+
+function GitubRepoCommitParse(info)
+local commit={}
+
+commit.type="commit";
+commit.who=info:value("commit/committer/name")
+commit.what=info:value("commit/message")
+commit.when=time.tosecs("%Y-%m-%dT%H:%M:%S", info:value("commit/committer/date"))
+
+return(commit)
+end
+
+function GithubRepoCommitsLoad(commit_list, user, repo)
+local S, doc, url, P, item
+
+url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/commits";
+S=stream.STREAM(url);
+doc=S:readdoc();
+
+--print(doc);
+P=dataparser.PARSER("json",doc);
+
+item=P:first()
+while item ~= nil
+do
+table.insert(commit_list, GitubRepoCommitParse(item))
+item=P:next()
+end
+
+end
+
+
+function GithubRepoReleaseParse(info)
+local release={}
+
+release.type="release";
+release.who=info:value("author/login");
+release.tag=info:value("tag_name")
+release.what=info:value("name")
+release.url=info:value("url")
+release.tarball=info:value("tarball_url")
+release.zipball=info:value("zipball_url")
+release.when=time.tosecs("%Y-%m-%dT%H:%M:%S", info:value("published_at"))
+
+return(release);
+end
+
+
+function GithubRepoReleasesLoad(commit_list, user, repo)
+local S, doc, url, P, item
+
+url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases";
+S=stream.STREAM(url);
+doc=S:readdoc();
+
+P=dataparser.PARSER("json",doc);
+
+item=P:first()
+while item ~= nil
+do
+table.insert(commit_list, GithubRepoReleaseParse(item))
+item=P:next()
+end
+
+end
+
+
+function GithubRepoCommitsList(report_type, user, repo)
+local commit_list={}
+
+GithubRepoCommitsLoad(commit_list, user, repo)
+if report_type=="history" then GithubRepoReleasesLoad(commit_list, user, repo) end
+
+table.sort(commit_list, SortByTime);
+
+for i,item in ipairs(commit_list)
+do
+Out:puts("~e" .. FormatTime(item.when) .. " ~y" .. strutil.padto(item.who, " ", 15) .. "~0  ");
+
+if report_type=="history"
+then
+	if item.type=="release"
+	then 
+		Out:puts("~m"..item.type.."~0 ")
+	else
+		Out:puts("~c"..item.type.." ~0 ")
+	end
+end
+
+Out:puts("  " ..item.what.."\n")
+end
+
+end
+
+
+
 function GithubRepoReleasesList(user, repo)
 local S, doc, url, P, item
 
@@ -305,7 +411,7 @@ S=stream.STREAM(url);
 doc=S:readdoc();
 P=dataparser.PARSER("json",doc);
 
-item=P:next()
+item=P:first()
 while item ~= nil
 do
 Out:puts("\n")
@@ -359,7 +465,7 @@ doc=S:readdoc()
 S:close()
 P=dataparser.PARSER("json",doc);
 
-item=P:next()
+item=P:first()
 while item ~= nil
 do
 
@@ -493,7 +599,7 @@ then
 	if S:getvalue("HTTP:ResponseCode")=="200"
 	then
 		P=dataparser.PARSER("json",doc);
-		item=P:next()
+		item=P:first()
 		while item ~=nil
 		do
 		Out:puts("~e"..item:value("login").."~0  "..url_color..item:value("html_url").."~0\r\n")
@@ -560,6 +666,12 @@ GithubRepoListWatchers(user, args[3])
 elseif args[2]=="pulls"
 then
 GithubRepoPulls(user, args[3])
+elseif args[2]=="history"
+then
+GithubRepoCommitsList("history", user, args[3])
+elseif args[2]=="commits"
+then
+GithubRepoCommitsList("commits", user, args[3])
 elseif args[2]=="issues"
 then
 GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/repos/"..GithubUser.."/"..args[3].."/issues?state=all",true)
@@ -698,6 +810,8 @@ print("   githuber.lua repo del [name]                                     - del
 print("   githuber.lua repo delete [name]                                  - delete repository")
 print("   githuber.lua repo rm [name]                                      - delete repository")
 print("   githuber.lua repo watchers [name]                                - list repo watchers")
+print("   githuber.lua repo commits [name]                                 - list repo commits")
+print("   githuber.lua repo history [name]                                 - list repo commits and releases")
 print("   githuber.lua repo pulls [name]                                   - list repo pull requests")
 print("   githuber.lua star [url]                                          - 'star' (bookmark) a repo by url")
 print("   githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url")
@@ -727,12 +841,26 @@ return true
 end
 
 
+-- if a proxy is not explicitly set in the program, then see if we can guess one from environment variables
+function ConfigureProxy()
 
---     'MAIN' starts here --
+if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("SOCKS_PROXY") end
+if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("socks_proxy") end
+if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("HTTPS_PROXY") end
+if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("https_proxy") end
+if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("all_proxy") end
 
 if strutil.strlen(GithubProxy) > 0 then
 net.setProxy(GithubProxy);
 end
+
+end
+
+
+
+--     'MAIN' starts here --
+
+ConfigureProxy()
 
 Out=terminal.TERM()
 if arg[1]=="repo" or arg[1] == "repos"
