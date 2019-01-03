@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.4"
+VERSION="1.5"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -384,19 +384,23 @@ table.sort(commit_list, SortByTime);
 
 for i,item in ipairs(commit_list)
 do
+
+if item.when > 0
+then
 Out:puts("~e" .. FormatTime(item.when) .. " ~y" .. strutil.padto(item.who, " ", 15) .. "~0  ");
 
 if report_type=="history"
 then
 	if item.type=="release"
 	then 
-		Out:puts("~m"..item.type.."~0 ")
+		Out:puts("~m"..item.type.."~0:"..item.tag.." ")
 	else
 		Out:puts("~c"..item.type.." ~0 ")
 	end
 end
 
 Out:puts("  " ..item.what.."\n")
+end
 end
 
 end
