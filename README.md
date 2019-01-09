@@ -1,5 +1,5 @@
 ## GITHUBER
-Githuber is just another github-api script. It focuses entirely on doing a few basic tasks on the user's repositories. It is intended to be used with command-line git. The user can list their notifications, repositories, and issues across all repositories. They can create and delete repositories. They can list, create and delete releases for a repository.
+Githuber is a tool for managing your github repositories. It is intended to be used alongside command-line git, and does no pull or push. The user can list their notifications and various information for their repositories. They can create and delete repositories. They can list, create and delete releases for a repository.
 
 ## INSTALL
 
@@ -55,21 +55,29 @@ lua githuer.lua notify
 Available commands are:
 
 ```
-   githuber.lua notify                                              - list users notifications
-   githuber.lua issues                                              - list issues across all users repositories
-   githuber.lua star [url]                                          - star a repo by url
-   githuber.lua unstar [url]                                        - unstar a repo by url
-   githuber.lua watch [url]                                         - watch a repo by url
-   githuber.lua unwatch [url]                                       - unwatch a repo by url
+   githuber.lua notify                                              - list user's notifications
+   githuber.lua notify issues                                       - list user's issues notifications
+   githuber.lua notify forks                                        - list user's forks notifications
+   githuber.lua notify stars                                        - list user's stars notifications
+   githuber.lua issues                                              - list all open issues acrosss all user's repos
    githuber.lua repo list                                           - list user's repositories
-   githuber.lua repo new [name] -desc [description]                 - create new repository
-   githuber.lua repo create [name] -desc [description]              - create new repository
+   githuber.lua repo new [name] [description]                       - create new repository
+   githuber.lua repo create [name] [description]                    - create new repository
+   githuber.lua repo set [repo] description [description]           - change description for a repository
+   githuber.lua repo set [repo] homepage [homepage]                 - change homepage for a repository
    githuber.lua repo del [name]                                     - delete repository
    githuber.lua repo delete [name]                                  - delete repository
    githuber.lua repo rm [name]                                      - delete repository
-   githuber.lua repo pulls [name]                                   - list pull requests for a repo
-   githuber.lua repo commits [name]                                 - show commits history for a repo
-   githuber.lua repo history [name]                                 - show commits and release history for a repo
+   githuber.lua repo watchers [name]                                - list repo watchers
+   githuber.lua repo commits [name]                                 - list repo commits
+   githuber.lua repo history [name]                                 - list repo commits and releases
+   githuber.lua repo issues [name]                                  - list repo issues
+   githuber.lua repo pulls [name]                                   - list repo pull requests
+   githuber.lua repo forks [name]                                   - list repo forks
+   githuber.lua star [url]                                          - 'star' (bookmark) a repo by url
+   githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url
+   githuber.lua watch [url]                                         - 'watch' a repo by url
+   githuber.lua unwatch [url]                                       - remove a 'watch' of a repo by url
    githuber.lua releases [repo]                                     - list releases for a repository
    githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository
    githuber.lua releases [repo] create [name] [title] [description] - create release for a repository

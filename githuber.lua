@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.5"
+VERSION="1.6"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -104,6 +104,7 @@ end
 
 return(str)
 end
+
 
 
 
@@ -616,6 +617,37 @@ end
 
 end
 
+
+
+function GithubRepoListForks(user, repo)
+local S, doc, url, P, item, secs
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/forks"
+S=stream.STREAM(url, "r hostauth");
+if S ~= nil
+then
+	doc=S:readdoc();
+
+	if S:getvalue("HTTP:ResponseCode")=="200"
+	then
+		P=dataparser.PARSER("json",doc);
+		item=P:first()
+		while item ~=nil
+		do
+			secs=time.tosecs("%Y-%m-%dT%H:%M:%S", item:value("created_at"))
+			-- if secs is zero, it means we got an item that's not a notification
+			Out:puts(FormatTime(secs) .. "  " .. "~e"..item:value("owner/login").."~0  "..url_color..item:value("html_url").."~0\r\n")
+			item=P:next()
+		end
+	end
+else
+		Out:puts("~rFAIL~0 No connection to github.com\n")
+end
+
+end
+
+
+
 function GithubRepoList(user)
 local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
 
@@ -667,6 +699,9 @@ GithubRepoSet(user, args[3], args[4], args[5])
 elseif args[2]=="watchers"
 then
 GithubRepoListWatchers(user, args[3])
+elseif args[2]=="forks"
+then
+GithubRepoListForks(user, args[3])
 elseif args[2]=="pulls"
 then
 GithubRepoPulls(user, args[3])
@@ -801,10 +836,13 @@ function PrintUsage()
 
 print()
 PrintVersion()
+print()
+print("Githuber is a tool for managing one's github repositories. Thus the following commands are for managing a user's own repositories, with the exceptions of the 'star', 'unstart', 'watch' and 'unwatch' commands")
 print("   githuber.lua notify                                              - list user's notifications")
 print("   githuber.lua notify issues                                       - list user's issues notifications")
 print("   githuber.lua notify forks                                        - list user's forks notifications")
 print("   githuber.lua notify stars                                        - list user's stars notifications")
+print("   githuber.lua issues                                              - list all open issues acrosss all user's repos")
 print("   githuber.lua repo list                                           - list user's repositories")
 print("   githuber.lua repo new [name] [description]                       - create new repository")
 print("   githuber.lua repo create [name] [description]                    - create new repository")
@@ -816,12 +854,13 @@ print("   githuber.lua repo rm [name]                                      - del
 print("   githuber.lua repo watchers [name]                                - list repo watchers")
 print("   githuber.lua repo commits [name]                                 - list repo commits")
 print("   githuber.lua repo history [name]                                 - list repo commits and releases")
+print("   githuber.lua repo issues [name]                                  - list repo issues")
 print("   githuber.lua repo pulls [name]                                   - list repo pull requests")
+print("   githuber.lua repo forks [name]                                   - list repo forks")
 print("   githuber.lua star [url]                                          - 'star' (bookmark) a repo by url")
 print("   githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url")
 print("   githuber.lua watch [url]                                         - 'watch' a repo by url")
 print("   githuber.lua unwatch [url]                                       - remove a 'watch' of a repo by url")
---print("   githuber.lua issues                                              - list issues across all users repositories")
 print("   githuber.lua releases [repo]                                     - list releases for a repository")
 print("   githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository")
 print("   githuber.lua releases [repo] create [name] [title] [description] - create release for a repository")
