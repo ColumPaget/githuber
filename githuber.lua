@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.6"
+VERSION="1.7"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -166,7 +166,7 @@ end
 
 
 function GithubNotifications(user, filter)
-local S, doc, url, P, N, M, I, event, when, secs
+local S, doc, url, P, I, event, when, secs
 
 url="https://api.github.com/users/"..user.."/received_events";
 S=stream.STREAM(url);
@@ -174,9 +174,7 @@ doc=S:readdoc();
 
 P=dataparser.PARSER("json",doc);
 
-N=P:open("/")
-M=N:first()
-I=M:first()
+I=P:first()
 while I ~= nil
 do
 
@@ -211,10 +209,11 @@ then
 	end
 end
 end
-I=M:next()
+I=P:next()
 end
 
 end
+
 
 function GithubOutputEvent(Event)
 local State
@@ -234,7 +233,7 @@ end
 
 
 function GithubIssuesURL(url, showall)
-local S, doc, P, N, M, I, key
+local S, doc, P, I, key
 local Issues={}
 local Event
 
@@ -242,15 +241,13 @@ S=stream.STREAM(url, "r hostauth");
 doc=S:readdoc();
 P=dataparser.PARSER("json",doc);
 
-N=P:open("/")
-M=N:first()
-I=M:first()
+I=P:first()
 while I ~= nil
 do
 Event=ParseEvent(I)
 if Event ~= nil then Issues[Event.id]=Event; end
 
-I=M:next()
+I=P:next()
 end
 
 for key,Event in pairs(Issues)
@@ -327,7 +324,6 @@ url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repo
 S=stream.STREAM(url);
 doc=S:readdoc();
 
---print(doc);
 P=dataparser.PARSER("json",doc);
 
 item=P:first()
@@ -649,16 +645,14 @@ end
 
 
 function GithubRepoList(user)
-local S, doc, url, P, N, M, I, name, desc, event, clones, uniques
+local S, doc, url, P, I, name, desc, event, clones, uniques
 
 url="https://api.github.com/users/"..user.."/repos";
 S=stream.STREAM(url);
 doc=S:readdoc();
 P=dataparser.PARSER("json",doc);
 
-N=P:open("/")
-M=N:first()
-I=M:first()
+I=P:first()
 while I ~= nil
 do
 	name=I:value("name")
@@ -678,7 +672,7 @@ do
 		Out:puts(str)
 	end
 	
-	I=M:next()
+	I=P:next()
 end
 
 end
@@ -758,7 +752,7 @@ end
 
 
 function GithubUnWatchRepo(user, url, WatchType)
-local S, doc, P, N, M, I, event, clones, uniques
+local S, doc, P, I, event, clones, uniques
 local URLInfo
 
 URLInfo=net.parseURL(url);
@@ -782,7 +776,7 @@ end
 
 
 function GithubRepoPulls(user, repo)
-local S, doc, url, P, N, M, I
+local S, doc, url, P, I
 local Event={}
 
 --get list of repos, then get pulls for each one
@@ -791,21 +785,21 @@ S=stream.STREAM(url);
 doc=S:readdoc();
 P=dataparser.PARSER("json",doc);
 
-N=P:open("/")
---M=N:first()
-I=N:first()
+print(doc)
+
+I=P:first()
 while I ~= nil
 do
 	Event=ParseEvent(I)
 	if Event ~= nil then GithubOutputEvent(Event) end
-	I=N:next()
+	I=P:next()
 end
 
 end
 
 
 function GithubPullsList(user)
-local S, doc, url, P, N, M, I
+local S, doc, url, P, I
 
 --get list of repos, then get pulls for each one
 url="https://api.github.com/users/"..user.."/repos";
@@ -813,15 +807,13 @@ S=stream.STREAM(url);
 doc=S:readdoc();
 P=dataparser.PARSER("json",doc);
 
-N=P:open("/")
-M=N:first()
-I=M:first()
+I=P:first()
 while I ~= nil
 do
 	name=I:value("name")
 	if strutil.strlen(name) > 0 then GithubRepoPulls(user, name); end
 	
-	I=M:next()
+	I=P:next()
 end
 
 end
