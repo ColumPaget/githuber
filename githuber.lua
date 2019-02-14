@@ -470,6 +470,7 @@ end
 
 function GithubRepoReleasesDelete(user, repo, tag) 
 local S, doc, url, P, item
+local found=false
 
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases";
 S=stream.STREAM(url)
@@ -483,18 +484,29 @@ do
 
 if item:value("tag_name")==tag
 then
-url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases/"..item:value("id")
-S=stream.STREAM(url, "D hostauth")
-doc=S:readdoc()
-S:close()
-break
+	found=true
+	url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases/"..item:value("id")
+	S=stream.STREAM(url, "D hostauth")
+	doc=S:readdoc()
+	if S:getvalue("HTTP:ResponseCode")=="204"
+	then
+			Out:puts("~gOKAY~0 Release removed successfully\n")
+	else
+			Out:puts("~rFAIL~0 Release removal failed\n")
+	end
+
+	S:close()
+	
+	break
 end
 
 item=P:next()
 end
 
+if found == false then Out:puts("~rFAIL~0 no matching relase found\n") end
 
 end
+
 
 function GithubRepoReleases(user, repo, args)
 local arg
@@ -896,9 +908,9 @@ print("   githuber.lua fork [url]                                          - for
 print("   githuber.lua releases [repo]                                     - list releases for a repository")
 print("   githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository")
 print("   githuber.lua releases [repo] create [name] [title] [description] - create release for a repository")
-print("   githuber.lua releases [repo] del [name] [title] [description]    - delete release for a repository")
-print("   githuber.lua releases [repo] delete [name] [title] [description] - delete release for a repository")
-print("   githuber.lua releases [repo] rm [name] [title] [description]     - delete release for a repository")
+print("   githuber.lua releases [repo] del [name]                          - delete release for a repository")
+print("   githuber.lua releases [repo] delete [name]                       - delete release for a repository")
+print("   githuber.lua releases [repo] rm [name]                           - delete release for a repository")
 
 end
 

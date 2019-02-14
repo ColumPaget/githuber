@@ -83,9 +83,9 @@ Available commands are:
    githuber.lua releases [repo]                                     - list releases for a repository
    githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository
    githuber.lua releases [repo] create [name] [title] [description] - create release for a repository
-   githuber.lua releases [repo] del [name] [title] [description]    - delete release for a repository
-   githuber.lua releases [repo] delete [name] [title] [description] - delete release for a repository
-   githuber.lua releases [repo] rm [name] [title] [description]     - delete release for a repository
+   githuber.lua releases [repo] del [name]                          - delete release for a repository
+   githuber.lua releases [repo] delete [name]                       - delete release for a repository
+   githuber.lua releases [repo] rm [name]                           - delete release for a repository
 
 ```
 
