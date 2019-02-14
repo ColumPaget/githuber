@@ -1,6 +1,6 @@
 require("stream")
-require("dataparser");
-require("process");
+require("dataparser")
+require("process")
 require("terminal")
 require("strutil")
 require("net")
@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.7"
+VERSION="1.8"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -27,10 +27,10 @@ if strutil.strlen(GithubAuth) == 0 then GithubAuth=process.getenv("GITHUB_AUTH")
 
 
 --default User-agent. All github requests must supply a user-agent header
-process.lu_set("HTTP:UserAgent","githuber-"..VERSION);
+process.lu_set("HTTP:UserAgent","githuber-"..VERSION)
 
 --uncomment this to see HTTP headers
---process.lu_set("HTTP:Debug","y");
+--process.lu_set("HTTP:Debug","y")
 
 
 
@@ -165,14 +165,43 @@ end
 
 
 
+function GithubPost(url, body, success_message, fail_message) 
+local S, str, P
+
+S=stream.STREAM(url, "w hostauth content-type=application/json content-length=" .. strutil.strlen(body))
+
+if S ~= nil
+then
+	S:writeln(body)
+	S:commit()
+
+	str=S:readdoc()
+	P=dataparser.PARSER("json", str)
+
+	if string.sub(S:getvalue("HTTP:ResponseCode"), 1, 1)=="2"
+	then
+		Out:puts("~gOKAY~0 "..success_message .."\n")
+	else
+		Out:puts("~rFAIL~0 ".. fail_message .. " " ..P:value("message").."\n")
+	end
+else	
+	Out:puts("~rFAIL~0 No connection to github.com\n")
+end
+
+end
+
+
+
+
+
 function GithubNotifications(user, filter)
 local S, doc, url, P, I, event, when, secs
 
 url="https://api.github.com/users/"..user.."/received_events";
-S=stream.STREAM(url);
-doc=S:readdoc();
+S=stream.STREAM(url)
+doc=S:readdoc()
 
-P=dataparser.PARSER("json",doc);
+P=dataparser.PARSER("json",doc)
 
 I=P:first()
 while I ~= nil
@@ -184,7 +213,7 @@ if secs > 0
 then
 when=FormatTime(secs)
 
-event=I:value("type");
+event=I:value("type")
 if 
 (filter == nil) or 
 (filter =="stars" and event == "WatchEvent") or
@@ -199,13 +228,13 @@ then
 
 	if event == "IssuesEvent"
 	then
-		Out:puts(when.."  ".. I:value("actor/login").. "  "..issue_color .. I:value("payload/action") .. "  issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
+		Out:puts(when.."  ".. I:value("actor/login").. "  "..issue_color .. I:value("payload/action") .. "  issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
 	elseif I:value("type")=="IssueCommentEvent"
 	then
-		Out:puts(when.."  ".. I:value("payload/comment/user/login").. "  ~rcommented on issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n");
+		Out:puts(when.."  ".. I:value("payload/comment/user/login").. "  ~rcommented on issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
 	else
 	
-		Out:puts(when.."  "..I:value("actor/login").. "  " .. event .. "  ".. I:value("repo/name") .. "\r\n");
+		Out:puts(when.."  "..I:value("actor/login").. "  " .. event .. "  ".. I:value("repo/name") .. "\r\n")
 	end
 end
 end
@@ -237,9 +266,9 @@ local S, doc, P, I, key
 local Issues={}
 local Event
 
-S=stream.STREAM(url, "r hostauth");
-doc=S:readdoc();
-P=dataparser.PARSER("json",doc);
+S=stream.STREAM(url, "r hostauth")
+doc=S:readdoc()
+P=dataparser.PARSER("json",doc)
 
 I=P:first()
 while I ~= nil
@@ -282,11 +311,11 @@ local S, doc, url, P, clones
 
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/traffic/clones";
 
-S=stream.STREAM(url, "r hostauth");
-doc=S:readdoc();
-P=dataparser.PARSER("json",doc);
-clones=P:value("count");
-uniques=P:value("uniques");
+S=stream.STREAM(url, "r hostauth")
+doc=S:readdoc()
+P=dataparser.PARSER("json",doc)
+clones=P:value("count")
+uniques=P:value("uniques")
 
 return clones,uniques
 end
@@ -296,12 +325,12 @@ function GithubRepoReferers(user, repo)
 local S, doc, url, P, clones
 
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/traffic/popular/referrers";
-S=stream.STREAM(url, "r hostauth");
-doc=S:readdoc();
-P=dataparser.PARSER("json",doc);
-clones=P:value("/count");
+S=stream.STREAM(url, "r hostauth")
+doc=S:readdoc()
+P=dataparser.PARSER("json",doc)
+clones=P:value("/count")
 
-return(clones);
+return(clones)
 end
 
 
@@ -321,10 +350,10 @@ function GithubRepoCommitsLoad(commit_list, user, repo)
 local S, doc, url, P, item
 
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/commits";
-S=stream.STREAM(url);
-doc=S:readdoc();
+S=stream.STREAM(url)
+doc=S:readdoc()
 
-P=dataparser.PARSER("json",doc);
+P=dataparser.PARSER("json",doc)
 
 item=P:first()
 while item ~= nil
@@ -340,7 +369,7 @@ function GithubRepoReleaseParse(info)
 local release={}
 
 release.type="release";
-release.who=info:value("author/login");
+release.who=info:value("author/login")
 release.tag=info:value("tag_name")
 release.what=info:value("name")
 release.url=info:value("url")
@@ -348,7 +377,7 @@ release.tarball=info:value("tarball_url")
 release.zipball=info:value("zipball_url")
 release.when=time.tosecs("%Y-%m-%dT%H:%M:%S", info:value("published_at"))
 
-return(release);
+return(release)
 end
 
 
@@ -356,10 +385,10 @@ function GithubRepoReleasesLoad(commit_list, user, repo)
 local S, doc, url, P, item
 
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases";
-S=stream.STREAM(url);
-doc=S:readdoc();
+S=stream.STREAM(url)
+doc=S:readdoc()
 
-P=dataparser.PARSER("json",doc);
+P=dataparser.PARSER("json",doc)
 
 item=P:first()
 while item ~= nil
@@ -377,14 +406,14 @@ local commit_list={}
 GithubRepoCommitsLoad(commit_list, user, repo)
 if report_type=="history" then GithubRepoReleasesLoad(commit_list, user, repo) end
 
-table.sort(commit_list, SortByTime);
+table.sort(commit_list, SortByTime)
 
 for i,item in ipairs(commit_list)
 do
 
 if item.when > 0
 then
-Out:puts("~e" .. FormatTime(item.when) .. " ~y" .. strutil.padto(item.who, " ", 15) .. "~0  ");
+Out:puts("~e" .. FormatTime(item.when) .. " ~y" .. strutil.padto(item.who, " ", 15) .. "~0  ")
 
 if report_type=="history"
 then
@@ -408,9 +437,9 @@ function GithubRepoReleasesList(user, repo)
 local S, doc, url, P, item
 
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases";
-S=stream.STREAM(url);
-doc=S:readdoc();
-P=dataparser.PARSER("json",doc);
+S=stream.STREAM(url)
+doc=S:readdoc()
+P=dataparser.PARSER("json",doc)
 
 item=P:first()
 while item ~= nil
@@ -427,31 +456,13 @@ end
 
 
 function GithubRepoReleasesNew(user, repo, tag, name, body) 
-local S, doc, url, P, item, len
+local body, url,
 
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases";
 
-doc='{"tag_name": "'..strutil.quoteChars(tag,'"')..'", "name": "'..strutil.quoteChars(name,'"')..'", '..'"body": "'..strutil.quoteChars(body,'"')..'"}'
-len=strutil.strlen(doc);
-S=stream.STREAM(url, "w hostauth content-type=application/json content-length="..len)
+body='{"tag_name": "'..strutil.quoteChars(tag,'"')..'", "name": "'..strutil.quoteChars(name,'"')..'", '..'"body": "'..strutil.quoteChars(body,'"')..'"}'
 
-if S ~= nil
-then
-	S:writeln(doc)
-	S:commit()
-	doc=S:readdoc();
-	P=dataparser.PARSER("json",doc);
-
-	if S:getvalue("HTTP:ResponseCode")=="201"
-	then
-		Out:puts("~gOKAY~0 Release created successfully\n")
-	else
-		Out:puts("~rFAIL~0 Release creation failed: " ..P:value("message").."\n")
-	end
-else	
-	Out:puts("~rFAIL~0 No connection to github.com\n")
-end
-
+GithubPost(url, body, "Release created successfully", "Release creation failed: ")
 end
 
 
@@ -464,7 +475,7 @@ url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repo
 S=stream.STREAM(url)
 doc=S:readdoc()
 S:close()
-P=dataparser.PARSER("json",doc);
+P=dataparser.PARSER("json",doc)
 
 item=P:first()
 while item ~= nil
@@ -472,7 +483,7 @@ do
 
 if item:value("tag_name")==tag
 then
-url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases/"..item:value("id");
+url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases/"..item:value("id")
 S=stream.STREAM(url, "D hostauth")
 doc=S:readdoc()
 S:close()
@@ -505,30 +516,12 @@ end
 
 
 function GithubRepoCreate(user, repo, description) 
-local S, doc, url, P, item, len
+local url, body
 
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/user/repos"
+body='{"name": "'..strutil.quoteChars(repo,'"')..'", '..'"description": "'..strutil.quoteChars(description,'"')..'"}'
 
-doc='{"name": "'..strutil.quoteChars(repo,'"')..'", '..'"description": "'..strutil.quoteChars(description,'"')..'"}'
-len=strutil.strlen(doc);
-S=stream.STREAM(url, "w hostauth content-type=application/json content-length="..len)
---S=stream.STREAM(url, "w content-type=application/json content-length="..len.." 'Authorization=token "..GithubAuth.."'");
-if S ~= nil
-then
-	S:writeln(doc);
-	S:commit()
-	if S:getvalue("HTTP:ResponseCode")=="201"
-	then
-		Out:puts("~gOKAY~0 Repo created successfully\n")
-		doc=S:readdoc();
-		--P=dataparser.PARSER("json",doc);
-	else
-		Out:puts("~rFAIL~0 Repo creation failed\n")
-	end
-else	
-Out:puts("~rFAIL~0 No connection to github.com\n")
-end
-
+GithubPost(url, body, "Repo created successfully", "Repo creation failed: ")
 end
 
 
@@ -537,10 +530,10 @@ local S, doc, url, P, item, len
 
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo
 
-S=stream.STREAM(url, "D hostauth");
+S=stream.STREAM(url, "D hostauth")
 if S ~= nil
 then
-	doc=S:readdoc();
+	doc=S:readdoc()
 
 	if S:getvalue("HTTP:ResponseCode")=="204"
 	then
@@ -555,34 +548,16 @@ end
 end
 
 function GithubRepoSet(user, repo, key, value)
-local S, doc, url, P, item, len
+local url, body
 
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo
 
-doc='{"name": "'..strutil.quoteChars(repo,'"')..'", '
-if key=="description" then doc=doc..'"description": "'..strutil.quoteChars(value,'"') end
-if key=="homepage" then doc=doc..'"homepage": "'..strutil.quoteChars(value,'"') end
-doc=doc..'"}'
+body='{"name": "'..strutil.quoteChars(repo,'"')..'", '
+if key=="description" then body=body..'"description": "'..strutil.quoteChars(value,'"') end
+if key=="homepage" then body=body..'"homepage": "'..strutil.quoteChars(value,'"') end
+body=body..'"}'
 
-len=strutil.strlen(doc)
-S=stream.STREAM(url, "P hostauth content-type=application/json content-length="..len)
-
-if S ~= nil
-then
-	S:writeln(doc)
-	S:commit()
-
-	doc=S:readdoc();
-
-	if S:getvalue("HTTP:ResponseCode")=="200"
-	then
-		Out:puts("~gOKAY~0 Repo updated successfully\n")
-	else
-		Out:puts("~rFAIL~0 Repo update failed\n")
-	end
-else
-		Out:puts("~rFAIL~0 No connection to github.com\n")
-end
+GithubPost(url, body, "Repo updated successfully", "Repo update failed: ")
 
 end
 
@@ -592,14 +567,14 @@ local S, doc, url, P, item, len
 
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/stargazers"
 
-S=stream.STREAM(url, "r hostauth");
+S=stream.STREAM(url, "r hostauth")
 if S ~= nil
 then
-	doc=S:readdoc();
+	doc=S:readdoc()
 
 	if S:getvalue("HTTP:ResponseCode")=="200"
 	then
-		P=dataparser.PARSER("json",doc);
+		P=dataparser.PARSER("json",doc)
 		item=P:first()
 		while item ~=nil
 		do
@@ -619,14 +594,14 @@ function GithubRepoListForks(user, repo)
 local S, doc, url, P, item, secs
 
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/forks"
-S=stream.STREAM(url, "r hostauth");
+S=stream.STREAM(url, "r hostauth")
 if S ~= nil
 then
-	doc=S:readdoc();
+	doc=S:readdoc()
 
 	if S:getvalue("HTTP:ResponseCode")=="200"
 	then
-		P=dataparser.PARSER("json",doc);
+		P=dataparser.PARSER("json",doc)
 		item=P:first()
 		while item ~=nil
 		do
@@ -644,13 +619,35 @@ end
 
 
 
-function GithubRepoList(user)
+
+function GithubRepoParent(user, name)
+local url, S, doc, P
+local parent_url
+local parent
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/".. args[2]
+S=stream.STREAM(url)
+if S ~= nil
+then
+	doc=S:readdoc()
+	P=dataparser.PARSER("json", doc)
+	parent=P:open()
+	parent_url=parent:value("url")
+	S:close()
+end
+
+return parent_url
+end
+
+
+function GithubRepoList(user, details)
 local S, doc, url, P, I, name, desc, event, clones, uniques
 
-url="https://api.github.com/users/"..user.."/repos";
-S=stream.STREAM(url);
-doc=S:readdoc();
-P=dataparser.PARSER("json",doc);
+url="https://api.github.com/users/"..user.."/repos?per_page=100";
+S=stream.STREAM(url)
+doc=S:readdoc()
+--print(doc)
+P=dataparser.PARSER("json",doc)
 
 I=P:first()
 while I ~= nil
@@ -658,15 +655,29 @@ do
 	name=I:value("name")
 	if strutil.strlen(name) > 0 
 	then
-		desc=I:value("description");
-		clones,uniques=GithubRepoTraffic(user, name);
+		desc=I:value("description")
 		if strutil.strlen(desc) == 0 or desc == "null" then desc=issue_color.."no description~0" end
 		str="~m~e" .. I:value("name") .. "~0  " 
 		str=str.. FormatNumericValue("stars", I:value("stargazers_count"), starred_color)
 		str=str.. FormatNumericValue("forks", I:value("forks_count"), fork_color)
 		str=str.. FormatNumericValue("issues", I:value("open_issues"), issue_color)
+
+		if details==true
+		then
+		clones,uniques=GithubRepoTraffic(user, name)
 		str=str.. FormatNumericValue("clones", clones, fork_color)
 		str=str.. FormatNumericValue("uniques", uniques, fork_color)
+		end
+
+		if I:value("fork")=="true"  
+		then
+			if details==true		
+			then
+					str=str.." ~bfork of ".. GithubRepoParent(user, name) .. "~0" 
+			else
+					str=str.." ~bfork~0" 
+			end
+		end
 		str=str.."\r\n" .. desc .. "\r\n\n"
 		
 		Out:puts(str)
@@ -708,19 +719,21 @@ GithubRepoCommitsList("commits", user, args[3])
 elseif args[2]=="issues"
 then
 GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/repos/"..GithubUser.."/"..args[3].."/issues?state=all",true)
+elseif args[2]=="show"
+then
+GithubRepoList(user, true)
 else
-GithubRepoList(user)
+GithubRepoList(user, false)
 end
 
 end
 
 
 function GithubWatchRepo(user, url, WatchType)
-local S, rcode, len
-local URLInfo
+local S, URLInfo
 local doc=""
 
-URLInfo=net.parseURL(url);
+URLInfo=net.parseURL(url)
 if WatchType=="star" then
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/user/starred"..URLInfo.path;
 else
@@ -728,42 +741,24 @@ url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.pa
 doc='{"subscribed": true, "ignored": false}'
 end
 
-len=strutil.strlen(doc)
-S=stream.STREAM(url, "W hostauth content-type=application/json content-length="..len)
-if len > 0 then S:writeln(doc) end
-S:commit();
-doc=S:readdoc();
-
-rcode=S:getvalue("HTTP:ResponseCode")
-
-if rcode=="204" or rcode=="200"
-then
-	if WatchType=="star" then
-	Out:puts("~gOKAY~0 target starred successfully\n")
-	else
-	Out:puts("~gOKAY~0 target watched successfully\n")
-	end
-else
-	Out:puts("~rFAIL~0 add " .. WatchType .. " failed\n")
-end
-
+GithubPost(url, doc, "added " .. WatchType, WatchType .. "failed")
 end
 
 
 
 function GithubUnWatchRepo(user, url, WatchType)
-local S, doc, P, I, event, clones, uniques
+local S, doc
 local URLInfo
 
-URLInfo=net.parseURL(url);
+URLInfo=net.parseURL(url)
 if WatchType=="star" then
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/user/starred"..URLInfo.path;
 else
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.path.."/subscription";
 end
 
-S=stream.STREAM(url, "D hostauth");
-doc=S:readdoc();
+S=stream.STREAM(url, "D hostauth")
+doc=S:readdoc()
 
 if S:getvalue("HTTP:ResponseCode")=="204"
 then
@@ -775,15 +770,30 @@ end
 end
 
 
+
+
+function GithubForkRepo(user, url, WatchType)
+local S, doc
+local URLInfo
+
+URLInfo=net.parseURL(url)
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.path.."/forks";
+
+GithubPost(url, "", "Fork sucessful", "Fork failed:") 
+end
+
+
+
+
 function GithubRepoPulls(user, repo)
 local S, doc, url, P, I
 local Event={}
 
 --get list of repos, then get pulls for each one
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls?state=all";
-S=stream.STREAM(url);
-doc=S:readdoc();
-P=dataparser.PARSER("json",doc);
+S=stream.STREAM(url)
+doc=S:readdoc()
+P=dataparser.PARSER("json",doc)
 
 print(doc)
 
@@ -803,21 +813,49 @@ local S, doc, url, P, I
 
 --get list of repos, then get pulls for each one
 url="https://api.github.com/users/"..user.."/repos";
-S=stream.STREAM(url);
-doc=S:readdoc();
-P=dataparser.PARSER("json",doc);
+S=stream.STREAM(url)
+doc=S:readdoc()
+P=dataparser.PARSER("json",doc)
 
 I=P:first()
 while I ~= nil
 do
 	name=I:value("name")
-	if strutil.strlen(name) > 0 then GithubRepoPulls(user, name); end
+	if strutil.strlen(name) > 0 then GithubRepoPulls(user, name) end
 	
 	I=P:next()
 end
 
 end
 
+
+function GithubPullRequest(user, args) 
+local S, doc, url, P, item, len, title
+local parent
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/".. args[2]
+S=stream.STREAM(url)
+doc=S:readdoc()
+P=dataparser.PARSER("json", doc)
+S:close()
+
+if P:value("fork") == "true"
+then
+	if strutil.strlen(args[3]) > 0
+	then
+		parent=P:open("/parent")
+		url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..parent:value("full_name") .."/pulls"
+		doc='{"title": "' .. args[3] .. '", "head": "' .. user ..":"..P:value("default_branch").. '", "base": "' .. parent:value("default_branch") .. '"}'
+
+		GithubPost(url, doc, "Pull request sent", "Pull request failed: ")
+	else
+		print("ERROR: No title given for pull request")
+	end
+else
+	print("ERROR: Repo is not a fork, no parent to request pull to")
+end
+
+end
 
 
 function PrintVersion()
@@ -840,19 +878,21 @@ print("   githuber.lua repo new [name] [description]                       - cre
 print("   githuber.lua repo create [name] [description]                    - create new repository")
 print("   githuber.lua repo set [repo] description [description]           - change description for a repository")
 print("   githuber.lua repo set [repo] homepage [homepage]                 - change homepage for a repository")
-print("   githuber.lua repo del [name]                                     - delete repository")
-print("   githuber.lua repo delete [name]                                  - delete repository")
-print("   githuber.lua repo rm [name]                                      - delete repository")
-print("   githuber.lua repo watchers [name]                                - list repo watchers")
-print("   githuber.lua repo commits [name]                                 - list repo commits")
-print("   githuber.lua repo history [name]                                 - list repo commits and releases")
-print("   githuber.lua repo issues [name]                                  - list repo issues")
-print("   githuber.lua repo pulls [name]                                   - list repo pull requests")
-print("   githuber.lua repo forks [name]                                   - list repo forks")
+print("   githuber.lua repo del [repo]                                     - delete repository")
+print("   githuber.lua repo delete [repo]                                  - delete repository")
+print("   githuber.lua repo rm [repo]                                      - delete repository")
+print("   githuber.lua repo watchers [repo]                                - list repo watchers")
+print("   githuber.lua repo commits [repo]                                 - list repo commits")
+print("   githuber.lua repo history [repo]                                 - list repo commits and releases")
+print("   githuber.lua repo issues [repo]                                  - list repo issues")
+print("   githuber.lua repo pulls [repo]                                   - list repo pull requests")
+print("   githuber.lua repo forks [repo]                                   - list repo forks")
+print("   githuber.lua preq [repo] [title]                                 - issue a pull request to parent repo")
 print("   githuber.lua star [url]                                          - 'star' (bookmark) a repo by url")
 print("   githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url")
 print("   githuber.lua watch [url]                                         - 'watch' a repo by url")
 print("   githuber.lua unwatch [url]                                       - remove a 'watch' of a repo by url")
+print("   githuber.lua fork [url]                                          - fork a repo by url")
 print("   githuber.lua releases [repo]                                     - list releases for a repository")
 print("   githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository")
 print("   githuber.lua releases [repo] create [name] [title] [description] - create release for a repository")
@@ -886,7 +926,7 @@ if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("https_proxy
 if strutil.strlen(GithubProxy) == 0 then GithubProxy=process.getenv("all_proxy") end
 
 if strutil.strlen(GithubProxy) > 0 then
-net.setProxy(GithubProxy);
+net.setProxy(GithubProxy)
 end
 
 end
@@ -900,37 +940,43 @@ ConfigureProxy()
 Out=terminal.TERM()
 if arg[1]=="repo" or arg[1] == "repos"
 then
-if GithubCheckUser(GithubUser) then GithubRepositories(GithubUser, arg) end
+	if GithubCheckUser(GithubUser) then GithubRepositories(GithubUser, arg) end
 elseif arg[1]=="releases" 
 then
-if GithubCheckUser(GithubUser) then GithubRepoReleases(GithubUser, arg[2], arg) end
+	if GithubCheckUser(GithubUser) then GithubRepoReleases(GithubUser, arg[2], arg) end
 elseif arg[1]=="referers" 
 then
-if GithubCheckUser(GithubUser) then GithubRepoReferers(GithubUser, arg[2]) end
+	if GithubCheckUser(GithubUser) then GithubRepoReferers(GithubUser, arg[2]) end
 elseif arg[1]=="traffic" 
 then
-if GithubCheckUser(GithubUser) then GithubRepoTraffic(GithubUser, arg[2]) end
+	if GithubCheckUser(GithubUser) then GithubRepoTraffic(GithubUser, arg[2]) end
 elseif arg[1]=="issues" 
 then
-if GithubCheckUser(GithubUser) then GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/issues?filter=all",false); end
+	if GithubCheckUser(GithubUser) then GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/issues?filter=all",false) end
 elseif arg[1]=="pulls" 
 then
-if GithubCheckUser(GithubUser) then GithubPullsList(GithubUser) end
+	if GithubCheckUser(GithubUser) then GithubPullsList(GithubUser) end
 elseif arg[1]=="star" 
 then
-if GithubCheckUser(GithubUser) then GithubWatchRepo(GithubUser, arg[2], "star") end
+	if GithubCheckUser(GithubUser) then GithubWatchRepo(GithubUser, arg[2], "star") end
 elseif arg[1]=="unstar" 
 then
-if GithubCheckUser(GithubUser) then GithubUnWatchRepo(GithubUser, arg[2], "star") end
+	if GithubCheckUser(GithubUser) then GithubUnWatchRepo(GithubUser, arg[2], "star") end
 elseif arg[1]=="watch" 
 then
-if GithubCheckUser(GithubUser) then GithubWatchRepo(GithubUser, arg[2], "watch") end
+	if GithubCheckUser(GithubUser) then GithubWatchRepo(GithubUser, arg[2], "watch") end
 elseif arg[1]=="unwatch" 
 then
-if GithubCheckUser(GithubUser) then GithubUnWatchRepo(GithubUser, arg[2],"watch") end
+	if GithubCheckUser(GithubUser) then GithubUnWatchRepo(GithubUser, arg[2],"watch") end
+elseif arg[1]=="fork" 
+then
+	if GithubCheckUser(GithubUser) then GithubForkRepo(GithubUser, arg[2]) end
 elseif arg[1]=="notify" 
 then
-if GithubCheckUser(GithubUser) then GithubNotifications(GithubUser, arg[2]) end
+	if GithubCheckUser(GithubUser) then GithubNotifications(GithubUser, arg[2]) end
+elseif arg[1]=="preq"
+then
+	if GithubCheckUser(GithubUser) then GithubPullRequest(GithubUser, arg) end
 else
 PrintUsage()
 end

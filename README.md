@@ -65,23 +65,28 @@ Available commands are:
    githuber.lua repo create [name] [description]                    - create new repository
    githuber.lua repo set [repo] description [description]           - change description for a repository
    githuber.lua repo set [repo] homepage [homepage]                 - change homepage for a repository
-   githuber.lua repo del [name]                                     - delete repository
-   githuber.lua repo delete [name]                                  - delete repository
-   githuber.lua repo rm [name]                                      - delete repository
-   githuber.lua repo watchers [name]                                - list repo watchers
-   githuber.lua repo commits [name]                                 - list repo commits
-   githuber.lua repo history [name]                                 - list repo commits and releases
-   githuber.lua repo issues [name]                                  - list repo issues
-   githuber.lua repo pulls [name]                                   - list repo pull requests
-   githuber.lua repo forks [name]                                   - list repo forks
+   githuber.lua repo del [repo]                                     - delete repository
+   githuber.lua repo delete [repo]                                  - delete repository
+   githuber.lua repo rm [repo]                                      - delete repository
+   githuber.lua repo watchers [repo]                                - list repo watchers
+   githuber.lua repo commits [repo]                                 - list repo commits
+   githuber.lua repo history [repo]                                 - list repo commits and releases
+   githuber.lua repo issues [repo]                                  - list repo issues
+   githuber.lua repo pulls [repo]                                   - list repo pull requests
+   githuber.lua repo forks [repo]                                   - list repo forks
+   githuber.lua preq [repo] [title]                                 - issue a pull request to parent repo
    githuber.lua star [url]                                          - 'star' (bookmark) a repo by url
    githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url
    githuber.lua watch [url]                                         - 'watch' a repo by url
    githuber.lua unwatch [url]                                       - remove a 'watch' of a repo by url
+   githuber.lua fork [url]                                          - fork a repo by url
    githuber.lua releases [repo]                                     - list releases for a repository
    githuber.lua releases [repo] new [name] [title] [description]    - create release for a repository
    githuber.lua releases [repo] create [name] [title] [description] - create release for a repository
    githuber.lua releases [repo] del [name] [title] [description]    - delete release for a repository
    githuber.lua releases [repo] delete [name] [title] [description] - delete release for a repository
    githuber.lua releases [repo] rm [name] [title] [description]     - delete release for a repository
+
 ```
+
+The "preq" command issues a pull request on a repo that you've forked into your own list of repos. Unfortunately it will fail if commits have been applied since the fork. The only solution I've discovered is to delete the fork, fork again, make the changes, and re-request. There's probably a better method, but I'm still finding my way around this aspect of github.
