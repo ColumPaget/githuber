@@ -455,12 +455,12 @@ end
 end
 
 
-function GithubRepoReleasesNew(user, repo, tag, name, body) 
-local body, url,
+function GithubRepoReleasesNew(user, repo, tag, name, descript) 
+local url, body
 
 url="https://" .. GithubUser .. ":" .. GithubAuth .. "@" .. "api.github.com/repos/"..user.."/"..repo.."/releases";
 
-body='{"tag_name": "'..strutil.quoteChars(tag,'"')..'", "name": "'..strutil.quoteChars(name,'"')..'", '..'"body": "'..strutil.quoteChars(body,'"')..'"}'
+body='{"tag_name": "'..strutil.quoteChars(tag,'"')..'", "name": "'..strutil.quoteChars(name,'"')..'", '..'"body": "'..strutil.quoteChars(descript,'"')..'"}'
 
 GithubPost(url, body, "Release created successfully", "Release creation failed: ")
 end
