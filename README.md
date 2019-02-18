@@ -61,6 +61,9 @@ Available commands are:
    githuber.lua notify stars                                        - list user's stars notifications
    githuber.lua issues                                              - list all open issues acrosss all user's repos
    githuber.lua repo list                                           - list user's repositories
+   githuber.lua repo names                                          - list user's repositories, just the names
+   githuber.lua repo urls                                           - list user's repositories, just the urls
+   githuber.lua repo details                                        - list user's repositories with additional trafic details
    githuber.lua repo new [name] [description]                       - create new repository
    githuber.lua repo create [name] [description]                    - create new repository
    githuber.lua repo set [repo] description [description]           - change description for a repository
@@ -88,5 +91,20 @@ Available commands are:
    githuber.lua releases [repo] rm [name]                           - delete release for a repository
 
 ```
+
+The "repo names" and "repo urls" commands are intended for use in scripting. For instance, you can back up all your github repositories with a script like this:
+
+```
+#!/bin/sh
+
+mkdir GithubBackup
+cd GithubBackup
+
+for URL in `githuber.lua repo urls`
+do
+git clone $URL
+done
+```
+
 
 The "preq" command issues a pull request on a repo that you've forked into your own list of repos. Unfortunately it will fail if commits have been applied since the fork. The only solution I've discovered is to delete the fork, fork again, make the changes, and re-request. There's probably a better method, but I'm still finding my way around this aspect of github.

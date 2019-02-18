@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.8"
+VERSION="1.9"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -652,7 +652,7 @@ return parent_url
 end
 
 
-function GithubRepoList(user, details)
+function GithubRepoList(user, list_type)
 local S, doc, url, P, I, name, desc, event, clones, uniques
 
 url="https://api.github.com/users/"..user.."/repos?per_page=100";
@@ -667,6 +667,13 @@ do
 	name=I:value("name")
 	if strutil.strlen(name) > 0 
 	then
+		if list_type=="names"
+		then
+		str=name.."\r\n"
+		elseif list_type=="urls"
+		then
+		str=I:value("html_url").."\r\n"
+		else
 		desc=I:value("description")
 		if strutil.strlen(desc) == 0 or desc == "null" then desc=issue_color.."no description~0" end
 		str="~m~e" .. I:value("name") .. "~0  " 
@@ -674,7 +681,7 @@ do
 		str=str.. FormatNumericValue("forks", I:value("forks_count"), fork_color)
 		str=str.. FormatNumericValue("issues", I:value("open_issues"), issue_color)
 
-		if details==true
+		if list_type=="details"
 		then
 		clones,uniques=GithubRepoTraffic(user, name)
 		str=str.. FormatNumericValue("clones", clones, fork_color)
@@ -683,7 +690,7 @@ do
 
 		if I:value("fork")=="true"  
 		then
-			if details==true		
+			if list_type=="details"
 			then
 					str=str.." ~bfork of ".. GithubRepoParent(user, name) .. "~0" 
 			else
@@ -691,6 +698,7 @@ do
 			end
 		end
 		str=str.."\r\n" .. desc .. "\r\n\n"
+		end
 		
 		Out:puts(str)
 	end
@@ -731,11 +739,11 @@ GithubRepoCommitsList("commits", user, args[3])
 elseif args[2]=="issues"
 then
 GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/repos/"..GithubUser.."/"..args[3].."/issues?state=all",true)
-elseif args[2]=="show"
+elseif args[2]=="details" or args[2]=="names" or args[2]=="urls"
 then
-GithubRepoList(user, true)
+GithubRepoList(user, args[2])
 else
-GithubRepoList(user, false)
+GithubRepoList(user, "")
 end
 
 end
@@ -886,6 +894,9 @@ print("   githuber.lua notify forks                                        - lis
 print("   githuber.lua notify stars                                        - list user's stars notifications")
 print("   githuber.lua issues                                              - list all open issues acrosss all user's repos")
 print("   githuber.lua repo list                                           - list user's repositories")
+print("   githuber.lua repo details                                        - list user's repositories with traffice details")
+print("   githuber.lua repo names                                          - list user's repositories, just names, for use in scripts")
+print("   githuber.lua repo urls                                           - list user's repositories, just urls, for use in scripts")
 print("   githuber.lua repo new [name] [description]                       - create new repository")
 print("   githuber.lua repo create [name] [description]                    - create new repository")
 print("   githuber.lua repo set [repo] description [description]           - change description for a repository")
