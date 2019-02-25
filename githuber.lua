@@ -165,10 +165,10 @@ end
 
 
 
-function GithubPost(url, body, success_message, fail_message) 
+function GithubPutPost(url, WriteFlag,  body, success_message, fail_message) 
 local S, str, P
 
-S=stream.STREAM(url, "w hostauth content-type=application/json content-length=" .. strutil.strlen(body))
+S=stream.STREAM(url, WriteFlag.. " hostauth content-type=application/json content-length=" .. strutil.strlen(body))
 
 if S ~= nil
 then
@@ -191,6 +191,13 @@ end
 end
 
 
+function GithubPost(url, body, success_message, fail_message) 
+GithubPutPost(url, "w",  body, success_message, fail_message) 
+end
+
+function GithubPut(url, body, success_message, fail_message) 
+GithubPutPost(url, "W",  body, success_message, fail_message) 
+end
 
 
 
@@ -761,7 +768,7 @@ url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.pa
 doc='{"subscribed": true, "ignored": false}'
 end
 
-GithubPost(url, doc, "added " .. WatchType, WatchType .. "failed")
+GithubPut(url, doc, "added " .. WatchType, WatchType .. " failed: ")
 end
 
 
@@ -799,7 +806,7 @@ local URLInfo
 URLInfo=net.parseURL(url)
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.path.."/forks";
 
-GithubPost(url, "", "Fork sucessful", "Fork failed:") 
+GithubPost(url, "", "Fork sucessful", "Fork failed: ") 
 end
 
 
