@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.9"
+VERSION="1.9.1"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
