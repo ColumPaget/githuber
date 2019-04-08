@@ -737,6 +737,12 @@ GithubRepoListForks(user, args[3])
 elseif args[2]=="pulls"
 then
 GithubRepoPulls(user, args[3])
+elseif args[2]=="topics"
+then
+GithubRepoTopics(user, args[3])
+elseif args[2]=="settopics"
+then
+GithubRepoSetTopics(user, args[3], args)
 elseif args[2]=="history"
 then
 GithubRepoCommitsList("history", user, args[3])
@@ -801,6 +807,7 @@ end
 
 function GithubForkRepo(user, url, WatchType)
 local S, doc
+local P, items
 local URLInfo
 
 URLInfo=net.parseURL(url)
@@ -809,6 +816,54 @@ url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.pa
 GithubPost(url, "", "Fork sucessful", "Fork failed: ") 
 end
 
+
+function GithubRepoTopics(user, repo)
+local S, doc, url, P, item, items
+local Event={}
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/topics";
+S=stream.STREAM(url, "r Accept=application/vnd.github.mercy-preview+json")
+doc=S:readdoc()
+print(doc)
+P=dataparser.PARSER("json", doc)
+items=P:open("/names")
+
+item=items:first()
+while item ~= nil
+do
+	Out:puts("item:" .. item:name() .. "\n")
+	item=items:next()
+end
+
+end
+
+
+function GithubRepoSetTopics(user, repo, args)
+local json, url, i, topic
+local topics=""
+
+
+for i,topic in ipairs(args)
+do
+	if i > 3 
+	then 
+	if strutil.strlen(topics)==0 
+	then 
+		topics=topics .. '"' .. topic .. '"' 
+	else
+		topics=topics .. ', "' .. topic .. '"' 
+	end
+	end
+end
+
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/topics";
+json='{"names": [' .. topics ..  ']}'
+
+print("JSON: "..json)
+GithubPutPost(url, "W Accept=application/vnd.github.mercy-preview+json", json, "topics updated", "failed to set topics")
+
+end
 
 
 

@@ -77,6 +77,8 @@ Available commands are:
    githuber.lua repo issues [repo]                                  - list repo issues
    githuber.lua repo pulls [repo]                                   - list repo pull requests
    githuber.lua repo forks [repo]                                   - list repo forks
+   githuber.lua repo topics [repo]                                  - list repo topics
+   githuber.lua repo settopics [repo] [topic] [topic]...            - set repo topics, this doesn't add, it sets a new list
    githuber.lua preq [repo] [title]                                 - issue a pull request to parent repo
    githuber.lua star [url]                                          - 'star' (bookmark) a repo by url
    githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url
