@@ -63,7 +63,8 @@ Available commands are:
    githuber.lua repo list                                           - list user's repositories
    githuber.lua repo names                                          - list user's repositories, just the names
    githuber.lua repo urls                                           - list user's repositories, just the urls
-   githuber.lua repo details                                        - list user's repositories with additional trafic details
+   githuber.lua repo details                                        - list user's repositories with traffic details
+   githuber.lua repo details [repo]                                 - detailed info for a repository
    githuber.lua repo new [name] [description]                       - create new repository
    githuber.lua repo create [name] [description]                    - create new repository
    githuber.lua repo set [repo] description [description]           - change description for a repository
@@ -71,11 +72,13 @@ Available commands are:
    githuber.lua repo del [repo]                                     - delete repository
    githuber.lua repo delete [repo]                                  - delete repository
    githuber.lua repo rm [repo]                                      - delete repository
+   githuber.lua repo merge [repo]  [pull number]                    - merge a pull request by its pull number
    githuber.lua repo watchers [repo]                                - list repo watchers
    githuber.lua repo commits [repo]                                 - list repo commits
    githuber.lua repo history [repo]                                 - list repo commits and releases
    githuber.lua repo issues [repo]                                  - list repo issues
    githuber.lua repo pulls [repo]                                   - list repo pull requests
+   githuber.lua repo pulls [repo] merge [pull number]               - merge a pull request by its pull number
    githuber.lua repo forks [repo]                                   - list repo forks
    githuber.lua repo topics [repo]                                  - list repo topics
    githuber.lua repo settopics [repo] [topic] [topic]...            - set repo topics, this doesn't add, it sets a new list

@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.9.1"
+VERSION="1.10.0"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -79,6 +79,17 @@ url_color="~c"
 --        USER CONFIGURABLE STUFF ENDS       --
 
 
+function TableSub(tab, start)
+local i, item
+local newtab={}
+
+for i,item in ipairs(tab)
+do
+	if i >= start then table.insert(newtab, item) end
+end
+
+return newtab
+end
 
 
 function ParseArg(args, i)
@@ -129,14 +140,16 @@ end
 
 function ParseEvent(I)
 local Issue={}
-local tmpstr, details
+local tmpstr, details, id
 
-if strutil.strlen(I:value("id")) ==0 then return nil end
+id=I:value("number")
+if strutil.strlen(id) ==0 then id=I:value("id") end
+if strutil.strlen(id) ==0 then return nil end
 
-Issue.id=string.format("%- 9s", I:value("id"))
+Issue.what=I:value("type")
+Issue.id=string.format("%- 9s", id)
 Issue.who=I:value("actor/login")
 if strutil.strlen(Issue.who) == 0 then Issue.who=I:value("user/login") end
-Issue.what=I:value("type")
 Issue.where=I:value("repository/name")
 if strutil.strlen(Issue.where) == 0 then Issue.where=I:value("repo/name") end
 Issue.when=time.tosecs("%Y-%m-%dT%H:%M:%S", I:value("created_at"))
@@ -258,10 +271,10 @@ local State
 	else State="~rOPEN~0"
 	end
 
-	Out:puts(Event.id .." "..State.." since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%- 15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n  url: "..Event.url.."\r\n")
+	Out:puts(Event.id .." ".. State.." since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%- 15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n  url: "..Event.url.."\r\n")
 	if strutil.strlen(Event.diff) > 0
 	then
-	Out:puts("  diff: "..Event.diff.."  patch: "..Event.patch .. "\r\n")
+		Out:puts("  diff: "..Event.diff.."  patch: "..Event.patch .. "\r\n")
 	end
 	Out:puts("\r\n")
 end
@@ -566,17 +579,17 @@ end
 
 end
 
+
 function GithubRepoSet(user, repo, key, value)
 local url, body
 
-url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo
+	body='{"name": "'..strutil.quoteChars(repo,'"')..'", '
+	if key=="description" then body=body..'"description": "'..strutil.quoteChars(value,'"') end
+	if key=="homepage" then body=body..'"homepage": "'..strutil.quoteChars(value,'"') end
+	body=body..'"}'
 
-body='{"name": "'..strutil.quoteChars(repo,'"')..'", '
-if key=="description" then body=body..'"description": "'..strutil.quoteChars(value,'"') end
-if key=="homepage" then body=body..'"homepage": "'..strutil.quoteChars(value,'"') end
-body=body..'"}'
-
-GithubPost(url, body, "Repo updated successfully", "Repo update failed: ")
+	url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo
+	GithubPost(url, body, "Repo updated successfully", "Repo update failed: ")
 
 end
 
@@ -639,19 +652,19 @@ end
 
 
 
-function GithubRepoParent(user, name)
+function GithubRepoParent(user, repo)
 local url, S, doc, P
 local parent_url
 local parent
 
-url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/".. args[2]
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/".. repo 
 S=stream.STREAM(url)
 if S ~= nil
 then
 	doc=S:readdoc()
 	P=dataparser.PARSER("json", doc)
-	parent=P:open()
-	parent_url=parent:value("url")
+	parent=P:open("/parent")
+	parent_url=parent:value("html_url")
 	S:close()
 end
 
@@ -659,13 +672,94 @@ return parent_url
 end
 
 
+function GithubFormatRepo(P, detail)
+local desc, str, item
+local user, clones, uniques
+
+
+	repo=P:value("name")
+	desc=P:value("description")
+
+	item=P:open("/owner")
+	user=item:value("login")
+
+	if strutil.strlen(desc) == 0 or desc == "null" then desc=issue_color.."no description~0" end
+
+ 	str="~m~e" .. repo .. "~0  " .. "   language: ".. P:value("language") .. "   ~b" .. P:value("html_url") .. "~0\r\n"
+	str=str.."created: " .. string.gsub(P:value("created_at"), "T", " ") .. "   updated: ".. string.gsub(P:value("updated_at"), "T", " ") .. "\r\n"
+
+	str=str.. FormatNumericValue("stars", P:value("stargazers_count"), starred_color)
+	str=str.. FormatNumericValue("forks", P:value("forks_count"), fork_color)
+	str=str.. FormatNumericValue("issues", P:value("open_issues"), issue_color)
+
+	if detail["traffic"] == true
+	then
+		clones,uniques=GithubRepoTraffic(user, repo)
+	end
+
+	str=str.. FormatNumericValue("clones", clones, fork_color)
+	str=str.. FormatNumericValue("uniques", uniques, fork_color)
+
+	if P:value("fork") == "true"  
+	then
+		if detail["forks"] == true
+		then
+				str=str.." ~bfork of ".. GithubRepoParent(user, repo) .. "~0" 
+		else
+				str=str.." ~bfork~0" 
+		end
+	end
+
+	str=str .. "\r\n"
+
+	str=str .. desc .. "\r\n"
+
+	if detail["topics"] == true
+	then
+	end
+
+
+return str
+end
+
+
+function GithubRepoInfo(user, repo)
+local S, doc, url, P, I
+local detail={}
+
+url="https://api.github.com/repos/"..user.."/"..repo
+S=stream.STREAM(url)
+doc=S:readdoc()
+P=dataparser.PARSER("json",doc)
+
+detail["forks"]=true
+detail["traffic"]=true
+detail["topics"]=true
+Out:puts(GithubFormatRepo(P, detail))
+	
+end
+
+
+
 function GithubRepoList(user, list_type)
 local S, doc, url, P, I, name, desc, event, clones, uniques
+local detail={}
+
+detail["forks"]=false
+detail["traffic"]=false
+detail["topics"]=false
+
+if list_type=="details"
+then
+	detail["forks"]=true
+	detail["traffic"]=true
+	detail["topics"]=true
+end
+
 
 url="https://api.github.com/users/"..user.."/repos?per_page=100";
 S=stream.STREAM(url)
 doc=S:readdoc()
---print(doc)
 P=dataparser.PARSER("json",doc)
 
 I=P:first()
@@ -676,40 +770,16 @@ do
 	then
 		if list_type=="names"
 		then
-		str=name.."\r\n"
+			Out:puts(name.."\r\n")
 		elseif list_type=="urls"
 		then
-		str=I:value("html_url").."\r\n"
+			Out:puts(I:value("html_url").."\r\n")
 		else
-		desc=I:value("description")
-		if strutil.strlen(desc) == 0 or desc == "null" then desc=issue_color.."no description~0" end
-		str="~m~e" .. I:value("name") .. "~0  " 
-		str=str.. FormatNumericValue("stars", I:value("stargazers_count"), starred_color)
-		str=str.. FormatNumericValue("forks", I:value("forks_count"), fork_color)
-		str=str.. FormatNumericValue("issues", I:value("open_issues"), issue_color)
-
-		if list_type=="details"
-		then
-		clones,uniques=GithubRepoTraffic(user, name)
-		str=str.. FormatNumericValue("clones", clones, fork_color)
-		str=str.. FormatNumericValue("uniques", uniques, fork_color)
+			Out:puts(GithubFormatRepo(I, detail))
 		end
-
-		if I:value("fork")=="true"  
-		then
-			if list_type=="details"
-			then
-					str=str.." ~bfork of ".. GithubRepoParent(user, name) .. "~0" 
-			else
-					str=str.." ~bfork~0" 
-			end
-		end
-		str=str.."\r\n" .. desc .. "\r\n\n"
-		end
-		
-		Out:puts(str)
 	end
 	
+	Out:puts("\r\n")
 	I=P:next()
 end
 
@@ -727,7 +797,15 @@ then
 GithubRepoDelete(user, args[3]) 
 elseif args[2]=="set"
 then
-GithubRepoSet(user, args[3], args[4], args[5]) 
+	if args[4]=="topics" 
+	then 
+		GithubRepoSetTopics(user, args[3], TableSub(args, 5))
+	else
+		GithubRepoSet(user, args[3], args[4], args[5]) 
+	end
+elseif args[2]=="merge"
+then
+	GithubRepoPullMerge(user, args[3], args[4])
 elseif args[2]=="watchers"
 then
 GithubRepoListWatchers(user, args[3])
@@ -736,13 +814,10 @@ then
 GithubRepoListForks(user, args[3])
 elseif args[2]=="pulls"
 then
-GithubRepoPulls(user, args[3])
+GithubRepoPulls(user, args[3], args[4], args[5])
 elseif args[2]=="topics"
 then
 GithubRepoTopics(user, args[3])
-elseif args[2]=="settopics"
-then
-GithubRepoSetTopics(user, args[3], args)
 elseif args[2]=="history"
 then
 GithubRepoCommitsList("history", user, args[3])
@@ -752,7 +827,15 @@ GithubRepoCommitsList("commits", user, args[3])
 elseif args[2]=="issues"
 then
 GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/repos/"..GithubUser.."/"..args[3].."/issues?state=all",true)
-elseif args[2]=="details" or args[2]=="names" or args[2]=="urls"
+elseif args[2]=="details" 
+then
+	if strutil.strlen(args[3]) > 0
+	then
+		GithubRepoInfo(user, args[3])
+	else
+		GithubRepoList(user, args[2])
+	end
+elseif  args[2]=="names" or args[2]=="urls"
 then
 GithubRepoList(user, args[2])
 else
@@ -831,7 +914,7 @@ items=P:open("/names")
 item=items:first()
 while item ~= nil
 do
-	Out:puts("item:" .. item:name() .. "\n")
+	Out:puts("item:" .. item:value() .. "\n")
 	item=items:next()
 end
 
@@ -845,14 +928,12 @@ local topics=""
 
 for i,topic in ipairs(args)
 do
-	if i > 3 
-	then 
+
 	if strutil.strlen(topics)==0 
 	then 
 		topics=topics .. '"' .. topic .. '"' 
 	else
 		topics=topics .. ', "' .. topic .. '"' 
-	end
 	end
 end
 
@@ -860,24 +941,23 @@ end
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/topics";
 json='{"names": [' .. topics ..  ']}'
 
-print("JSON: "..json)
+print("T: ".. json)
 GithubPutPost(url, "W Accept=application/vnd.github.mercy-preview+json", json, "topics updated", "failed to set topics")
 
 end
 
 
 
-function GithubRepoPulls(user, repo)
+function GithubRepoPullsList(user, repo)
 local S, doc, url, P, I
 local Event={}
 
---get list of repos, then get pulls for each one
+
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls?state=all";
 S=stream.STREAM(url)
 doc=S:readdoc()
-P=dataparser.PARSER("json",doc)
-
 print(doc)
+P=dataparser.PARSER("json",doc)
 
 I=P:first()
 while I ~= nil
@@ -889,6 +969,43 @@ end
 
 end
 
+
+
+function GithubRepoPullMerge(user, repo, pullid)
+local S, doc, url, json, P, I, merge_sha, merge_msg
+
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls/"..pullid;
+S=stream.STREAM(url)
+doc=S:readdoc()
+P=dataparser.PARSER("json",doc)
+
+merge_title=P:value("title")
+
+I=P:open("/head")
+merge_sha=I:value("sha")
+merge_msg=""
+
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls/"..pullid.."/merge";
+json='{"commit_title": "' .. merge_title .. '", "commit_message": "' .. merge_msg .. '", "sha": "' .. merge_sha .. '"}'
+print(json)
+GithubPutPost(url, "W", json, "pull request merged", "failed to merge pull request")
+end
+
+
+
+function GithubRepoPulls(user, repo, action, pullid)
+
+if strutil.strlen(action) == 0 then action="list" end
+
+if action=="merge" 
+then
+	GithubRepoPullMerge(user, repo, pullid)
+else
+	GithubRepoPullsList(user, repo)
+end
+
+end
 
 function GithubPullsList(user)
 local S, doc, url, P, I
@@ -956,7 +1073,8 @@ print("   githuber.lua notify forks                                        - lis
 print("   githuber.lua notify stars                                        - list user's stars notifications")
 print("   githuber.lua issues                                              - list all open issues acrosss all user's repos")
 print("   githuber.lua repo list                                           - list user's repositories")
-print("   githuber.lua repo details                                        - list user's repositories with traffice details")
+print("   githuber.lua repo details                                        - list user's repositories with traffic details")
+print("   githuber.lua repo details [repo]                                 - detailed info for a repository")
 print("   githuber.lua repo names                                          - list user's repositories, just names, for use in scripts")
 print("   githuber.lua repo urls                                           - list user's repositories, just urls, for use in scripts")
 print("   githuber.lua repo new [name] [description]                       - create new repository")
@@ -966,11 +1084,13 @@ print("   githuber.lua repo set [repo] homepage [homepage]                 - cha
 print("   githuber.lua repo del [repo]                                     - delete repository")
 print("   githuber.lua repo delete [repo]                                  - delete repository")
 print("   githuber.lua repo rm [repo]                                      - delete repository")
+print("   githuber.lua repo merge [repo]  [pull number]                    - merge a pull request by its pull number")
 print("   githuber.lua repo watchers [repo]                                - list repo watchers")
 print("   githuber.lua repo commits [repo]                                 - list repo commits")
 print("   githuber.lua repo history [repo]                                 - list repo commits and releases")
 print("   githuber.lua repo issues [repo]                                  - list repo issues")
 print("   githuber.lua repo pulls [repo]                                   - list repo pull requests")
+print("   githuber.lua repo pulls [repo] merge [pull number]               - merge a pull request by its pull number")
 print("   githuber.lua repo forks [repo]                                   - list repo forks")
 print("   githuber.lua preq [repo] [title]                                 - issue a pull request to parent repo")
 print("   githuber.lua star [url]                                          - 'star' (bookmark) a repo by url")
