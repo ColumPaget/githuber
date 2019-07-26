@@ -1081,6 +1081,7 @@ print("   githuber.lua repo new [name] [description]                       - cre
 print("   githuber.lua repo create [name] [description]                    - create new repository")
 print("   githuber.lua repo set [repo] description [description]           - change description for a repository")
 print("   githuber.lua repo set [repo] homepage [homepage]                 - change homepage for a repository")
+print("   githuber.lua repo set [repo] topics [topics]                     - change topics for a repository")
 print("   githuber.lua repo del [repo]                                     - delete repository")
 print("   githuber.lua repo delete [repo]                                  - delete repository")
 print("   githuber.lua repo rm [repo]                                      - delete repository")
