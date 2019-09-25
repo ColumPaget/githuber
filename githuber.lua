@@ -110,7 +110,7 @@ valnum=tonumber(value)
 if valnum==nil then valnum=0 end
 
 if (valnum > 0) then str="~e"..name..": "..color..value.."~0  "
-else str=name..": "..value.."  "
+else str=name..": 0 "
 end
 
 return(str)
