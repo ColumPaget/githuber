@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.10.0"
+VERSION="1.11.0"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -685,8 +685,8 @@ local user, clones, uniques
 
 	if strutil.strlen(desc) == 0 or desc == "null" then desc=issue_color.."no description~0" end
 
- 	str="~m~e" .. repo .. "~0  " .. "   language: ".. P:value("language") .. "   ~b" .. P:value("html_url") .. "~0\r\n"
-	str=str.."created: " .. string.gsub(P:value("created_at"), "T", " ") .. "   updated: ".. string.gsub(P:value("updated_at"), "T", " ") .. "\r\n"
+ 	str="~m~e" .. repo .. "~0  " .. "   ~elanguage:~0 ".. P:value("language") .. "   ~b" .. P:value("html_url") .. "~0\r\n"
+	str=str.."~ecreated:~0 " .. string.gsub(P:value("created_at"), "T", " ") .. "   ~eupdated:~0 ".. string.gsub(P:value("updated_at"), "T", " ") .. "\r\n"
 
 	str=str.. FormatNumericValue("stars", P:value("stargazers_count"), starred_color)
 	str=str.. FormatNumericValue("forks", P:value("forks_count"), fork_color)
@@ -712,12 +712,24 @@ local user, clones, uniques
 
 	str=str .. "\r\n"
 
-	str=str .. desc .. "\r\n"
 
 	if detail["topics"] == true
 	then
+		str=str.."~etopics:~0 "
+		topics_list=P:open("topics")
+		if topics_list ~= nil
+		then
+			item=topics_list:next()
+			while item ~= nil
+			do
+				str=str.." "..item:value("")
+				item=topics_list:next()
+			end
+		end
+		str=str .. "\r\n"
 	end
 
+	str=str .. desc .. "\r\n"
 
 return str
 end
@@ -728,8 +740,10 @@ local S, doc, url, P, I
 local detail={}
 
 url="https://api.github.com/repos/"..user.."/"..repo
-S=stream.STREAM(url)
+S=stream.STREAM(url, "r Accept=application/vnd.github.mercy-preview+json")
 doc=S:readdoc()
+
+print(doc)
 P=dataparser.PARSER("json",doc)
 
 detail["forks"]=true
@@ -758,7 +772,7 @@ end
 
 
 url="https://api.github.com/users/"..user.."/repos?per_page=100";
-S=stream.STREAM(url)
+S=stream.STREAM(url, "r Accept=application/vnd.github.mercy-preview+json")
 doc=S:readdoc()
 P=dataparser.PARSER("json",doc)
 
