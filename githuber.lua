@@ -743,7 +743,7 @@ url="https://api.github.com/repos/"..user.."/"..repo
 S=stream.STREAM(url, "r Accept=application/vnd.github.mercy-preview+json")
 doc=S:readdoc()
 
-print(doc)
+--print(doc)
 P=dataparser.PARSER("json",doc)
 
 detail["forks"]=true
@@ -921,7 +921,7 @@ local Event={}
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/topics";
 S=stream.STREAM(url, "r Accept=application/vnd.github.mercy-preview+json")
 doc=S:readdoc()
-print(doc)
+--print(doc)
 P=dataparser.PARSER("json", doc)
 items=P:open("/names")
 
@@ -955,7 +955,6 @@ end
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/topics";
 json='{"names": [' .. topics ..  ']}'
 
-print("T: ".. json)
 GithubPutPost(url, "W Accept=application/vnd.github.mercy-preview+json", json, "topics updated", "failed to set topics")
 
 end
@@ -970,7 +969,7 @@ local Event={}
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls?state=all";
 S=stream.STREAM(url)
 doc=S:readdoc()
-print(doc)
+--print(doc)
 P=dataparser.PARSER("json",doc)
 
 I=P:first()
@@ -1002,7 +1001,7 @@ merge_msg=""
 
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos/"..user.."/"..repo.."/pulls/"..pullid.."/merge";
 json='{"commit_title": "' .. merge_title .. '", "commit_message": "' .. merge_msg .. '", "sha": "' .. merge_sha .. '"}'
-print(json)
+--print(json)
 GithubPutPost(url, "W", json, "pull request merged", "failed to merge pull request")
 end
 
