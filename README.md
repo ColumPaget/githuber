@@ -55,6 +55,12 @@ lua githuer.lua notify
 Available commands are:
 
 ```
+   githuber.lua account set name                                    - set user's display-name
+   githuber.lua account set email                                   - set user's registered email
+   githuber.lua account set bio                                     - set user's bio
+   githuber.lua account set company                                 - set user's displayed company
+   githuber.lua account set location                                - set user's displayed location
+   githuber.lua account set blog                                    - set user's blog URL
    githuber.lua notify                                              - list user's notifications
    githuber.lua notify issues                                       - list user's issues notifications
    githuber.lua notify forks                                        - list user's forks notifications

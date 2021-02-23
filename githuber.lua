@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.11.0"
+VERSION="1.12.0"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -181,7 +181,12 @@ end
 function GithubPutPost(url, WriteFlag,  body, success_message, fail_message) 
 local S, str, P
 
-S=stream.STREAM(url, WriteFlag.. " hostauth content-type=application/json content-length=" .. strutil.strlen(body))
+if WriteFlag == "P"
+then
+	S=stream.STREAM(url, WriteFlag.. " hostauth content-type=application/json method=PATCH content-length=" .. strutil.strlen(body))
+else
+	S=stream.STREAM(url, WriteFlag.. " hostauth content-type=application/json content-length=" .. strutil.strlen(body))
+end
 
 if S ~= nil
 then
@@ -191,7 +196,7 @@ then
 	str=S:readdoc()
 	P=dataparser.PARSER("json", str)
 
-	if string.sub(S:getvalue("HTTP:ResponseCode"), 1, 1)=="2"
+	if string.sub(S:getvalue("HTTP:ResponseCode"), 1, 1) == "2"
 	then
 		Out:puts("~gOKAY~0 "..success_message .."\n")
 	else
@@ -210,6 +215,10 @@ end
 
 function GithubPut(url, body, success_message, fail_message) 
 GithubPutPost(url, "W",  body, success_message, fail_message) 
+end
+
+function GithubPatch(url, body, success_message, fail_message) 
+GithubPutPost(url, "P",  body, success_message, fail_message) 
 end
 
 
@@ -799,16 +808,14 @@ end
 
 end
 
-
-
 function GithubRepositories(user, args)
 
 if args[2]=="create" or args[2]=="new"
 then
-GithubRepoCreate(user, args[3], args[4]) 
+	GithubRepoCreate(user, args[3], args[4]) 
 elseif args[2]=="del" or args[2]=="delete" or args[2]=="rm"
 then
-GithubRepoDelete(user, args[3]) 
+	GithubRepoDelete(user, args[3]) 
 elseif args[2]=="set"
 then
 	if args[4]=="topics" 
@@ -859,13 +866,48 @@ end
 end
 
 
+
+-- target can be 'name', 'email', 'bio'
+function GithubAccountSet(user, target, args)
+local str, doc, url
+local value=""
+
+for i,str in ipairs(args)
+do
+	value=value..str
+end
+
+doc='{"' .. target .. '": "' .. value .. '"}'
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/user"
+GithubPatch(url, doc, "changed " .. target, "change ".. target .. " failed")
+
+end
+
+
+
+function GithubAccount(user, args)
+
+if args[2]=="set"
+then
+	if args[3]=="user" then GithubAccountSet(user, "user", TableSub(args, 4))
+	elseif args[3]=="email" then GithubAccountSet(user, "email", TableSub(args, 4))
+	elseif args[3]=="bio" then GithubAccountSet(user, "bio", TableSub(args, 4))
+	elseif args[3]=="location" then GithubAccountSet(user, "location", TableSub(args, 4))
+	elseif args[3]=="company" then GithubAccountSet(user, "company", TableSub(args, 4))
+	elseif args[3]=="blog" then GithubAccountSet(user, "blog", TableSub(args, 4))
+	else print("ERROR: unknown account setting '"..args[3].."'")
+	end
+end
+
+end
+
 function GithubWatchRepo(user, url, WatchType)
 local S, URLInfo
 local doc=""
 
 URLInfo=net.parseURL(url)
 if WatchType=="star" then
-url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/user/starred"..URLInfo.path;
+url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/user/starred"..URLInfo.path
 else
 url="https://"..GithubUser..":"..GithubAuth.."@api.github.com/repos"..URLInfo.path.."/subscription"
 doc='{"subscribed": true, "ignored": false}'
@@ -1080,6 +1122,12 @@ print()
 PrintVersion()
 print()
 print("Githuber is a tool for managing one's github repositories. Thus the following commands are for managing a user's own repositories, with the exceptions of the 'star', 'unstart', 'watch' and 'unwatch' commands")
+print("   githuber.lua account set name                                    - set user's display-name")
+print("   githuber.lua account set email                                   - set user's registered email")
+print("   githuber.lua account set bio                                     - set user's bio")
+print("   githuber.lua account set company                                 - set user's displayed company")
+print("   githuber.lua account set location                                - set user's displayed location")
+print("   githuber.lua account set blog                                    - set user's blog URL")
 print("   githuber.lua notify                                              - list user's notifications")
 print("   githuber.lua notify issues                                       - list user's issues notifications")
 print("   githuber.lua notify forks                                        - list user's forks notifications")
@@ -1157,7 +1205,10 @@ end
 ConfigureProxy()
 
 Out=terminal.TERM()
-if arg[1]=="repo" or arg[1] == "repos"
+if arg[1]=="account"
+then
+	if GithubCheckUser(GithubUser) then GithubAccount(GithubUser, arg) end
+elseif arg[1]=="repo" or arg[1] == "repos"
 then
 	if GithubCheckUser(GithubUser) then GithubRepositories(GithubUser, arg) end
 elseif arg[1]=="releases" 
