@@ -67,8 +67,10 @@ Available commands are:
    githuber.lua notify stars                                        - list user's stars notifications
    githuber.lua issues                                              - list all open issues acrosss all user's repos
    githuber.lua repo list                                           - list user's repositories
-   githuber.lua repo names                                          - list user's repositories, just the names
-   githuber.lua repo urls                                           - list user's repositories, just the urls
+   githuber.lua repo names                                          - list user's repositories, just the names on seperate lines
+   githuber.lua repo snames                                         - list user's repositories, just the names seperated by spaces
+   githuber.lua repo urls                                           - list user's repositories, just the urls on seperate lines
+   githuber.lua repo surls                                          - list user's repositories, just the urls seperated by spaces
    githuber.lua repo details                                        - list user's repositories with traffic details
    githuber.lua repo details [repo]                                 - detailed info for a repository
    githuber.lua repo new [name] [description]                       - create new repository
@@ -103,7 +105,7 @@ Available commands are:
 
 ```
 
-The "repo names" and "repo urls" commands are intended for use in scripting. For instance, you can back up all your github repositories with a script like this:
+The "repo names", "repo snames", "repo urls" and  "repo surls" commands are intended for use in scripting. "repo names" and "repo urls" use newline as a separator (so one item per line) whereas "repo snames" and "repo surls" use space as a separator. For instance, you can back up all your github repositories with a script like this:
 
 ```
 #!/bin/sh
@@ -111,7 +113,7 @@ The "repo names" and "repo urls" commands are intended for use in scripting. For
 mkdir GithubBackup
 cd GithubBackup
 
-for URL in `githuber.lua repo urls`
+for URL in `githuber.lua repo surls`
 do
 git clone $URL
 done
