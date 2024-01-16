@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.13.0"
+VERSION="1.14.0"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -147,7 +147,7 @@ if strutil.strlen(id) ==0 then id=I:value("id") end
 if strutil.strlen(id) ==0 then return nil end
 
 Issue.what=I:value("type")
-Issue.id=string.format("%- 9s", id)
+Issue.id=string.format("%-9s", id)
 Issue.who=I:value("actor/login")
 if strutil.strlen(Issue.who) == 0 then Issue.who=I:value("user/login") end
 Issue.where=I:value("repository/name")
@@ -319,7 +319,7 @@ local State
 	else State="~rOPEN~0"
 	end
 
-	Out:puts(Event.id .." ".. State.." since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%- 15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n  url: "..Event.url.."\r\n")
+	Out:puts(Event.id .." ".. State.." since " .. time.formatsecs("%Y/%m/%d",Event.when) .. " by ".. string.format("%-15s", Event.who) .. "  " .. Event.where .. "  " .. title_color .. "'" .. Event.why.."~0'  ".. "comments: "..Event.no_of_comments.."\r\n  url: "..Event.url.."\r\n")
 	if strutil.strlen(Event.diff) > 0
 	then
 		Out:puts("  diff: "..Event.diff.."  patch: "..Event.patch .. "\r\n")
@@ -775,23 +775,30 @@ do
 	then
 		if list_type == "names"
 		then
-      name=strutil.quoteChars(name, " 	`'$\"")
+			name=strutil.quoteChars(name, " 	`'$\"")
 			Out:puts(name.."\r\n")
 		elseif list_type == "snames"
 		then
-      name=strutil.quoteChars(name, " 	`'$\"")
+			name=strutil.quoteChars(name, " 	`'$\"")
 			Out:puts(name.." ")
 		elseif list_type == "urls"
 		then
-      name=strutil.quoteChars(I:value("html_url"), " 	`'$\"")
+			name=strutil.quoteChars(I:value("html_url"), " 	`'$\"")
 			Out:puts(name.."\r\n")
 		elseif list_type == "surls"
 		then
-      name=strutil.quoteChars(I:value("html_url"), " 	`'$\"")
+			name=strutil.quoteChars(I:value("html_url"), " 	`'$\"")
 			Out:puts(name.." ")
+		elseif list_type == "issues"
+		then
+			if tonumber(P:value("open_issues")) > 0
+			then
+			Out:puts(GithubFormatRepo(I, detail))
+			Out:puts("\r\n")
+			end
 		else
 			Out:puts(GithubFormatRepo(I, detail))
-	    Out:puts("\r\n")
+			Out:puts("\r\n")
 		end
 	end
 	
@@ -800,14 +807,20 @@ end
 
 end
 
-function GithubRepositories(user, args)
 
-if args[2]=="create" or args[2]=="new"
-then
-	GithubRepoCreate(user, args[3], args[4]) 
-elseif args[2]=="del" or args[2]=="delete" or args[2]=="rm"
-then
-	GithubRepoDelete(user, args[3]) 
+function GithubRepoActions(user, args)
+
+if args[2]=="create" or args[2]=="new" then GithubRepoCreate(user, args[3], args[4]) 
+elseif args[2]=="del" or args[2]=="delete" or args[2]=="rm" then GithubRepoDelete(user, args[3]) 
+elseif args[2]=="merge" then GithubRepoPullMerge(user, args[3], args[4])
+elseif args[2]=="watchers" then GithubRepoListWatchers(user, args[3])
+elseif args[2]=="forks" then GithubRepoListForks(user, args[3])
+elseif args[2]=="pulls" then GithubRepoPulls(user, args[3], args[4], args[5])
+elseif args[2]=="topics" then GithubRepoTopics(user, args[3])
+elseif args[2]=="history" then GithubRepoCommitsList("history", user, args[3])
+elseif args[2]=="commits" then GithubRepoCommitsList("commits", user, args[3])
+elseif args[2]=="issues" then GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/repos/"..GithubUser.."/"..args[3].."/issues?state=all",true)
+elseif args[2]=="details" then GithubRepoInfo(user, args[3])
 elseif args[2]=="set"
 then
 	if args[4]=="topics" 
@@ -816,48 +829,21 @@ then
 	else
 		GithubRepoSet(user, args[3], args[4], args[5]) 
 	end
-elseif args[2]=="merge"
-then
-	GithubRepoPullMerge(user, args[3], args[4])
-elseif args[2]=="watchers"
-then
-GithubRepoListWatchers(user, args[3])
-elseif args[2]=="forks"
-then
-GithubRepoListForks(user, args[3])
-elseif args[2]=="pulls"
-then
-GithubRepoPulls(user, args[3], args[4], args[5])
-elseif args[2]=="topics"
-then
-GithubRepoTopics(user, args[3])
-elseif args[2]=="history"
-then
-GithubRepoCommitsList("history", user, args[3])
-elseif args[2]=="commits"
-then
-GithubRepoCommitsList("commits", user, args[3])
-elseif args[2]=="issues"
-then
-GithubIssuesURL("https://" .. GithubUser .. ":" .. GithubAuth .. "@api.github.com/repos/"..GithubUser.."/"..args[3].."/issues?state=all",true)
-elseif args[2]=="details" 
-then
-	if strutil.strlen(args[3]) > 0
-	then
-		GithubRepoInfo(user, args[3])
-	else
-		GithubRepoList(user, args[2])
-	end
-elseif  args[2] == "names" or args[2] == "urls" or args[2] == "snames" or args[2] == "surls"
-then
-GithubRepoList(user, args[2])
-else
-GithubRepoList(user, "")
 end
+
 
 end
 
 
+function GithubRepositories(user, args)
+
+if  args[2] == "names" or args[2] == "urls" or args[2] == "snames" or args[2] == "surls" then GithubRepoList(user, args[2])
+elseif args[2] == "details" then GithubRepoList(user, args[2])
+elseif args[2] == "issues" then GithubRepoList(user, args[2])
+else GithubRepoList(user, "")
+end
+
+end
 
 -- target can be 'name', 'email', 'bio'
 function GithubAccountSet(user, target, args)
@@ -1108,6 +1094,8 @@ print("   githuber.lua issues                                              - lis
 print("   githuber.lua repo list                                           - list user's repositories")
 print("   githuber.lua repo details                                        - list user's repositories with traffic details")
 print("   githuber.lua repo details [repo]                                 - detailed info for a repository")
+print("   githuber.lua repo issues                                         - list user's repositories that have issues")
+print("   githuber.lua repo issues [repo]                                  - list issues for a specific repository")
 print("   githuber.lua repo names                                          - list user's repositories, just names, one name per line, for use in scripts")
 print("   githuber.lua repo urls                                           - list user's repositories, just urls, one url per line, for use in scripts")
 print("   githuber.lua repo snames                                         - list user's repositories, just names, all in one line, for use in scripts")
@@ -1124,7 +1112,6 @@ print("   githuber.lua repo merge [repo]  [pull number]                    - mer
 print("   githuber.lua repo watchers [repo]                                - list repo watchers")
 print("   githuber.lua repo commits [repo]                                 - list repo commits")
 print("   githuber.lua repo history [repo]                                 - list repo commits and releases")
-print("   githuber.lua repo issues [repo]                                  - list repo issues")
 print("   githuber.lua repo pulls [repo]                                   - list repo pull requests")
 print("   githuber.lua repo pulls [repo] merge [pull number]               - merge a pull request by its pull number")
 print("   githuber.lua repo forks [repo]                                   - list repo forks")
@@ -1184,7 +1171,13 @@ then
 	if GithubCheckUser(GithubUser) then GithubAccount(GithubUser, arg) end
 elseif arg[1]=="repo" or arg[1] == "repos"
 then
-	if GithubCheckUser(GithubUser) then GithubRepositories(GithubUser, arg) end
+	if GithubCheckUser(GithubUser)
+	then 
+		-- args[3] is the repo name, if there isn't one then it's a 'list repos' function
+		if strutil.strlen(arg[3]) > 0 then GithubRepoActions(GithubUser,arg)
+		else GithubRepositories(GithubUser, arg) 
+		end
+	end
 elseif arg[1]=="releases" 
 then
 	if GithubCheckUser(GithubUser) then GithubRepoReleases(GithubUser, arg[2], arg) end

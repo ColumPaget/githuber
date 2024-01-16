@@ -52,7 +52,10 @@ Githuber is usually run within the lua interpreter. e.g.
 lua githuer.lua notify
 ```
 
-Available commands are:
+alternatively you can configure linux's "binfmt" system to auto-run scripts ending in '.lua'
+
+
+## COMMANDS
 
 ```
    githuber.lua account set name                                    - set user's display-name
@@ -67,16 +70,19 @@ Available commands are:
    githuber.lua notify stars                                        - list user's stars notifications
    githuber.lua issues                                              - list all open issues acrosss all user's repos
    githuber.lua repo list                                           - list user's repositories
-   githuber.lua repo names                                          - list user's repositories, just the names on seperate lines
-   githuber.lua repo snames                                         - list user's repositories, just the names seperated by spaces
-   githuber.lua repo urls                                           - list user's repositories, just the urls on seperate lines
-   githuber.lua repo surls                                          - list user's repositories, just the urls seperated by spaces
    githuber.lua repo details                                        - list user's repositories with traffic details
    githuber.lua repo details [repo]                                 - detailed info for a repository
+   githuber.lua repo issues                                         - list user's repositories that have issues
+   githuber.lua repo issues [repo]                                  - list issues for a specific repository
+   githuber.lua repo names                                          - list user's repositories, just names, one name per line, for use in scripts
+   githuber.lua repo urls                                           - list user's repositories, just urls, one url per line, for use in scripts
+   githuber.lua repo snames                                         - list user's repositories, just names, all in one line, for use in scripts
+   githuber.lua repo surls                                          - list user's repositories, just urls, all in one line, for use in scripts
    githuber.lua repo new [name] [description]                       - create new repository
    githuber.lua repo create [name] [description]                    - create new repository
    githuber.lua repo set [repo] description [description]           - change description for a repository
    githuber.lua repo set [repo] homepage [homepage]                 - change homepage for a repository
+   githuber.lua repo set [repo] topics [topics]                     - change topics for a repository
    githuber.lua repo del [repo]                                     - delete repository
    githuber.lua repo delete [repo]                                  - delete repository
    githuber.lua repo rm [repo]                                      - delete repository
@@ -84,12 +90,9 @@ Available commands are:
    githuber.lua repo watchers [repo]                                - list repo watchers
    githuber.lua repo commits [repo]                                 - list repo commits
    githuber.lua repo history [repo]                                 - list repo commits and releases
-   githuber.lua repo issues [repo]                                  - list repo issues
    githuber.lua repo pulls [repo]                                   - list repo pull requests
    githuber.lua repo pulls [repo] merge [pull number]               - merge a pull request by its pull number
    githuber.lua repo forks [repo]                                   - list repo forks
-   githuber.lua repo topics [repo]                                  - list repo topics
-   githuber.lua repo settopics [repo] [topic] [topic]...            - set repo topics, this doesn't add, it sets a new list
    githuber.lua preq [repo] [title]                                 - issue a pull request to parent repo
    githuber.lua star [url]                                          - 'star' (bookmark) a repo by url
    githuber.lua unstar [url]                                        - remove a 'star' (bookmark) of a repo by url
@@ -102,7 +105,6 @@ Available commands are:
    githuber.lua releases [repo] del [name]                          - delete release for a repository
    githuber.lua releases [repo] delete [name]                       - delete release for a repository
    githuber.lua releases [repo] rm [name]                           - delete release for a repository
-
 ```
 
 The "repo names", "repo snames", "repo urls" and  "repo surls" commands are intended for use in scripting. "repo names" and "repo urls" use newline as a separator (so one item per line) whereas "repo snames" and "repo surls" use space as a separator. For instance, you can back up all your github repositories with a script like this:

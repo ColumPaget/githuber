@@ -1,0 +1,3 @@
+v1.14.0 (2024-01-16)
+  * add support for listing all repos with issues (githuber.lua repo issues)
+  * fix 'invalid format string' errors in recent lua versions
