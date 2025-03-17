@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.14.0"
+VERSION="1.15.0"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -664,6 +664,34 @@ return parent_url
 end
 
 
+function GithubColorLicense(name) 
+local str;
+
+if strutil.strlen(name) < 1 then return("~rnone~0") end
+if name == "null" then return("~r" .. name .."~0") end
+if name == "other" then return("~y" .. name .."~0") end
+str=string.sub(name, 1, 4)
+if str=="ncsa" then return ("~g" ..name .."~0") end
+if str=="lgpl" then return ("~g" ..name .."~0") end
+if str=="zlib" then return ("~g" ..name .."~0") end
+if str=="0bsd" then return ("~g" ..name .."~0") end
+
+str=string.sub(name, 1, 3)
+if str=="gpl" then return ("~g" ..name .."~0") end
+if str=="mit" then return ("~g" ..name .."~0") end
+if str=="bsd" then return ("~g" ..name .."~0") end
+if str=="mpl" then return ("~g" ..name .."~0") end
+if str=="isc" then return ("~g" ..name .."~0") end
+if str=="afl" then return ("~g" ..name .."~0") end
+if str=="ecl" then return ("~g" ..name .."~0") end
+if str=="cc0" then return ("~g" ..name .."~0") end
+if str=="cc" then return ("~g" ..name .."~0") end
+if str=="cc-" then return ("~g" ..name .."~0") end
+
+return(name)
+end
+
+
 function GithubFormatRepo(P, detail)
 local desc, str, item
 local user, clones, uniques
@@ -676,7 +704,7 @@ local user, clones, uniques
 
 	if strutil.strlen(desc) == 0 or desc == "null" then desc=issue_color.."no description~0" end
 
- 	str="~m~e" .. repo .. "~0  " .. "   ~elanguage:~0 ".. P:value("language") .. "   ~b" .. P:value("html_url") .. "~0\r\n"
+ 	str="~m~e" .. repo .. "~0  " .. "   ~elanguage:~0 ".. P:value("language") .. "   ~elicense:~0 " .. GithubColorLicense(P:value("license/key")) .. "   ~b" .. P:value("html_url") .. "~0\r\n"
 	str=str.."~ecreated:~0 " .. string.gsub(P:value("created_at"), "T", " ") .. "   ~eupdated:~0 ".. string.gsub(P:value("updated_at"), "T", " ") .. "\r\n"
 
 	str=str.. FormatNumericValue("stars", P:value("stargazers_count"), starred_color)
@@ -765,7 +793,6 @@ end
 
 doc=GithubGet("https://api.github.com/users/"..user.."/repos?per_page=100", "r Accept=application/vnd.github.mercy-preview+json")
 P=dataparser.PARSER("json", doc)
-
 
 I=P:first()
 while I ~= nil
