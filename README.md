@@ -107,6 +107,8 @@ alternatively you can configure linux's "binfmt" system to auto-run scripts endi
    githuber.lua releases [repo] rm [name]                           - delete release for a repository
 ```
 
+The 'notify' command also accepts a `-details` command-line switch, which causes it to print out the text of any comments relating to an event.
+
 The "repo names", "repo snames", "repo urls" and  "repo surls" commands are intended for use in scripting. "repo names" and "repo urls" use newline as a separator (so one item per line) whereas "repo snames" and "repo surls" use space as a separator. For instance, you can back up all your github repositories with a script like this:
 
 ```

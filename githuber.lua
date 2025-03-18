@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.15.0"
+VERSION="1.16.0"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -64,16 +64,17 @@ Color setup. Available colors are:
 ~m  magenta
 ~n  black (noir)
 ~w  white
-
+~e  emphisis (bold)
 ]]--
 
 issue_color="~r"
 comment_color="~y"
-title_color="~c"
+title_color="~e~c"
 starred_color="~b"
 fork_color="~m"
 create_color="~g"
 pullreq_color="~r"
+comment_color="~b"
 url_color="~c"
 
 --        USER CONFIGURABLE STUFF ENDS       --
@@ -128,6 +129,14 @@ elseif (time.secs() - secs) < day * 2 then when="~y"..time.formatsecs("%Y_%m_%d 
 else when="~c"..time.formatsecs("%Y_%m_%d %H:%M", secs).."~0" end
 
 return(when)
+end
+
+
+function FormatComment(comment)
+local str
+str=string.gsub(comment, "\\n", " ")
+str=string.gsub(str, "[\r\n]", " ")
+return(comment_color..str.."~0")
 end
 
 
@@ -265,11 +274,50 @@ end
 
 
 
-function GithubNotifications(user, filter)
+function GithubNotifyParseArgs(args)
+local pos 
+local filter=""
+local show_details=false
+
+if args ~= nil
+then
+  for pos=2,#args
+  do
+    if args[pos] =="stars" then filter=args[pos]
+    elseif args[pos] =="forks" then filter=args[pos]
+    elseif args[pos] =="pulls" then filter=args[pos]
+    elseif args[pos] =="issues" then filter=args[pos]
+    elseif args[pos] == "-details" then show_details=true 
+    end
+ end
+end
+
+return filter,show_details
+
+end
+
+
+
+function GithubNotifyFilterMatchesEvent(filter, event)
+if (strutil.strlen(filter) == 0) then return (true) end
+if (filter =="stars" and event == "WatchEvent") then  return(true) end
+if (filter =="forks" and event == "ForkEvent") then  return(true) end
+if (filter =="pulls" and event == "PullRequestEvent") then  return(true)end
+if (filter =="issues" and event == "IssuesEvent") then  return(true) end
+return(false)
+end
+
+
+function GithubNotifications(user, args)
 local doc, P, I, event, when, secs
+local filter, show_details
+
+filter,show_details=GithubNotifyParseArgs(args)
 
 doc=GithubGet("https://api.github.com/users/"..user.."/received_events", "r hostauth")
 P=dataparser.PARSER("json",doc)
+
+--io.stderr:write(doc)
 
 I=P:first()
 while I ~= nil
@@ -282,26 +330,33 @@ then
 when=FormatTime(secs)
 
 event=I:value("type")
-if 
-(filter == nil) or 
-(filter =="stars" and event == "WatchEvent") or
-(filter =="forks" and event == "ForkEvent") or
-(filter =="pulls" and event == "PullRequestEvent") or
-(filter =="issues" and event == "IssuesEvent") 
+if GithubNotifyFilterMatchesEvent(filter, event)
 then 
 	if event=="WatchEvent" then event=starred_color.."starred~0" end
 	if event=="CreateEvent" then event=create_color.."created~0" end
 	if event=="ForkEvent" then event=fork_color.."forked~0" end
-	if event=="PullRequestEvent" then event=pullreq_color.."pull request~0" end
 
 	if event == "IssuesEvent"
 	then
 		Out:puts(when.."  ".. I:value("actor/login").. "  "..issue_color .. I:value("payload/action") .. "  issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
-	elseif I:value("type")=="IssueCommentEvent"
+		if show_details == true then Out:puts("    "..FormatComment(I:value("payload/issue/body")) .. "\r\n") end
+	elseif event =="IssueCommentEvent"
 	then
 		Out:puts(when.."  ".. I:value("payload/comment/user/login").. "  ~rcommented on issue~0 "..title_color.."'" .. I:value("payload/issue/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
+		if show_details == true then Out:puts("    "..FormatComment(I:value("payload/comment/body")) .. "\r\n") end
+	elseif event=="CommitCommentEvent" then
+		Out:puts(when.."  ".. I:value("payload/comment/user/login").. "  ~rcommented on commit~0 "..title_color.."'" .. I:value("payload/commit/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
+		if show_details == true then Out:puts("    "..FormatComment(I:value("payload/comment/body")) .. "\r\n") end
+	elseif event=="PullRequestCommentEvent" then
+		Out:puts(when.."  ".. I:value("payload/comment/user/login").. "  ~rcommented on pull request~0 "..title_color.."'" .. I:value("payload/commit/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
+		if show_details == true then Out:puts("    "..FormatComment(I:value("payload/comment/body")) .. "\r\n") end
+	elseif event=="PullRequestEvent" then
+		Out:puts(when.."  ".. I:value("actor/login").. "  " .. pullreq_color .. "pull request~0 "..title_color.."'" .. I:value("payload/pull_request/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
+		if show_details == true then Out:puts("    "..FormatComment(I:value("payload/pull_request/body")) .. "\r\n") end
+	elseif event=="PullRequestReviewCommentEvent" then
+		Out:puts(when.."  ".. I:value("payload/comment/user/login").. "  ~rcommented on pull request review~0 "..title_color.."'" .. I:value("payload/pull_request/title") .. "'~0 " .. I:value("repo/name") .. "\r\n")
+		if show_details == true then Out:puts("    "..FormatComment(I:value("payload/comment/body")) .. "\r\n") end
 	else
-	
 		Out:puts(when.."  "..I:value("actor/login").. "  " .. event .. "  ".. I:value("repo/name") .. "\r\n")
 	end
 end
@@ -1154,7 +1209,8 @@ print("   githuber.lua releases [repo] create [name] [title] [description] - cre
 print("   githuber.lua releases [repo] del [name]                          - delete release for a repository")
 print("   githuber.lua releases [repo] delete [name]                       - delete release for a repository")
 print("   githuber.lua releases [repo] rm [name]                           - delete release for a repository")
-
+print()
+print("The 'notify' command also accepts a '-details' command-line switch, which causes it to print out the text of any comments relating to an event")
 end
 
 
@@ -1237,7 +1293,7 @@ then
 	if GithubCheckUser(GithubUser) then GithubForkRepo(GithubUser, arg[2]) end
 elseif arg[1]=="notify" 
 then
-	if GithubCheckUser(GithubUser) then GithubNotifications(GithubUser, arg[2]) end
+	if GithubCheckUser(GithubUser) then GithubNotifications(GithubUser, arg) end
 elseif arg[1]=="preq"
 then
 	if GithubCheckUser(GithubUser) then GithubPullRequest(GithubUser, arg) end
