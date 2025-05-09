@@ -8,7 +8,7 @@ require("time")
 
 
 -- program version
-VERSION="1.16.0"
+VERSION="1.16.1"
 
 --        USER CONFIGURABLE STUFF STARTS HERE       --
 -- Put your username here, or leave blank and use environment variable GITHUB_USER instead
@@ -134,6 +134,9 @@ end
 
 function FormatComment(comment)
 local str
+
+if strutil.strlen(comment)==0 then return "" end
+
 str=string.gsub(comment, "\\n", " ")
 str=string.gsub(str, "[\r\n]", " ")
 return(comment_color..str.."~0")
